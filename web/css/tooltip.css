@@ -1,0 +1,13 @@
+.Tooltip-content {
+  position: absolute;
+  word-wrap: break-word;
+  min-width: 20px;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  line-height: 1.4em;
+  padding: 10px;
+  text-align: left;
+}

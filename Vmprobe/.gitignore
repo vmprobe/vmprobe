@@ -1,0 +1,9 @@
+Build
+MYMETA.json
+MYMETA.yml
+_build/
+blib/
+lib/Vmprobe/Cache/Snapshot.c
+lib/Vmprobe/Cache/Snapshot.o
+lib/Vmprobe/Cache.c
+lib/Vmprobe/Cache.o

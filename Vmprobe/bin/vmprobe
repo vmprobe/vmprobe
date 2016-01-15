@@ -1,0 +1,32 @@
+#!/usr/bin/env perl
+
+use strict;
+
+our $VERSION = 'REPO_DEV_MODE';
+
+
+my $libvmprobe_path;
+
+if ($VERSION eq 'REPO_DEV_MODE') {
+    require FindBin;
+    require blib;
+
+    die "running in REPO_DEV_MODE but couldn't find blib/ (maybe you forgot to build the perl package?)"
+        if !-d "$FindBin::Bin/../blib";
+
+    blib->import("$FindBin::Bin/..");
+
+    $libvmprobe_path = "$FindBin::Bin/../libvmprobe/libvmprobe.so";
+} else {
+    require File::ShareDir;
+
+    $libvmprobe_path = File::ShareDir::dist_dir('Vmprobe') . '/libvmprobe.so';
+}
+
+
+require DynaLoader;
+DynaLoader::dl_load_file($libvmprobe_path, 0x01);
+
+
+require Vmprobe::Cmd;
+Vmprobe::Cmd::run_cmd('vmprobe', \@ARGV);

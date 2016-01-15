@@ -1,0 +1,13 @@
+Install deps:
+
+npm install
+
+
+Development:
+
+npm run dev
+
+
+Distribution:
+
+npm run dist

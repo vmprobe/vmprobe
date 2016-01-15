@@ -1,0 +1,36 @@
+back-end:
+  * detect and prevent duplicate remotes, at least for GUI
+  * ensure that closing a remote will kill the connecting process
+  * fix memory leaks in perl process
+  * EV not playing nice with Net:OpenSSH (not detecting child exits)
+  * refactor Vmprobe::Remote to handle multiple connections
+
+web ui:
+  * should be able to drag from any part of title-bar (ie red "probe" span)
+  * if connection is lost to web-server should grey out screen and show error
+  * column sorting
+  * way to save and reload settings
+  * time-series plotting
+
+cmd line:
+  * output should always be in deterministic order (usually by specified remote order)
+    * sortable
+  * example use-cases in --help output
+
+
+
+memory info:
+  * show active versus non-active memory
+
+
+fs cache:
+  * implement locking/snapshots
+
+
+
+new windows:
+  * saved snapshots
+  * cpu info
+  * process viewer "like top(1)"
+    * allows throttling, renice, cpu affinity
+  * netstat
