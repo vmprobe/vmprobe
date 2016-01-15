@@ -55,6 +55,8 @@ Pull-requests are also very much appreciated:
 
 [https://github.com/vmprobe/vmprobe/pulls](https://github.com/vmprobe/vmprobe/pulls)
 
+Please also stop by our IRC channel (#vmprobe on EFNet) if you feel like chatting.
+
 ### Developing Vmprobe (perl)
 
 In the `Vmprobe` directory, you should use standard [Module::Build](https://metacpan.org/pod/Module::Build)
