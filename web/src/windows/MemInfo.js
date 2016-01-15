@@ -14,7 +14,7 @@ import * as util from '../util';
 export class MemInfo extends PureComponent {
   static defaultProps = {
     windowTitle: "Memory Info",
-  }
+  };
 
 
   render() {

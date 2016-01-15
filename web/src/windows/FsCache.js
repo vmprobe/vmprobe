@@ -14,7 +14,7 @@ export class FsCache extends PureComponent {
     windowTitle: "Filesystem Cache",
     defaultWidth: 800,
     defaultHeight: 400,
-  }
+  };
 
   render() {
     return (

@@ -10,7 +10,7 @@ import { Resizable, ResizableBox } from 'react-resizable';
 export class ResourceWindow extends PureComponent {
   static defaultProps = {
     closeable: true,
-  }
+  };
 
   constructor(props) {
     super(props);

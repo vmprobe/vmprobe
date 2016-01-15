@@ -12,7 +12,7 @@ export class ServerList extends PureComponent {
     windowTitle: "Server List",
     defaultWidth: 800,
     defaultHeight: 400,
-  }
+  };
 
   render() {
     return (

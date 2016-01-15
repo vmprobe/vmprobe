@@ -10,7 +10,7 @@ export class ControlPanel extends PureComponent {
     windowTitle: <span>vm<span style={{color:'#d40000'}}>probe</span></span>,
     defaultWidth: 150,
     defaultHeight: 600,
-  }
+  };
 
   render() {
     return (

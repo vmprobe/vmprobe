@@ -12,7 +12,7 @@ export default class Tooltip extends PureComponent {
   static defaultProps = {
     active: false,
     zIndex: 2147483647,
-  }
+  };
 
   constructor(props) {
     super(props);
