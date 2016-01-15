@@ -9,10 +9,7 @@
 vmprobe is a utility for managing the virtual memory of your cloud, cluster, or servers. It is based on [vmtouch](http://hoytech.com/vmtouch/) technology but it adds many new features, and two new interfaces:
 
 * A powerful [command-line client](http://vmprobe.com/command-line)
-  [![command-line screenshot](https://vmprobe.github.io/vmprobe/cmdline.png)](http://vmprobe.com/command-line)
-
 * An intuitive [web GUI](http://vmprobe.com/web-gui-tutorial)
-  [![web-gui screenshot](https://vmprobe.github.io/vmprobe/gui.png)](http://vmprobe.com/web-gui-tutorial)
 
 In our opinion, the main feature that sets vmprobe apart from other sysadmin tools is that vmprobe is designed from the start to operate on distributed collections of machines that are typical in modern architectures. As much as possible, vmprobe removes the distinction between local and remote administration.
 
