@@ -18,7 +18,7 @@ In our opinion, the main feature that sets vmprobe apart from other sysadmin too
 
 ## Installing
 
-The [http://vmprobe.com/install](vmprobe installation guide) should have platform-specific instructions as well as links to the latest builds, but for now you must either install from source (see the contributing section below), or from CPAN.
+The [vmprobe installation guide](http://vmprobe.com/install) should have platform-specific instructions as well as links to the latest builds, but for now you must either install from source (see the contributing section below), or from CPAN.
 
 If you have [cpanminus](https://metacpan.org/pod/App::cpanminus) installed, this should be as easy as:
 
