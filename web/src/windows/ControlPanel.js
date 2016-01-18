@@ -18,6 +18,7 @@ export class ControlPanel extends PureComponent {
         <button type="button" roll="toolbar" className="btn btn-default" onClick={() => this.createWindow("ServerList")}>Server List</button>
         <button type="button" roll="toolbar" className="btn btn-default" onClick={() => this.createWindow("MemInfo")}>Memory Info</button>
         <button type="button" roll="toolbar" className="btn btn-default" onClick={() => this.createWindow("FsCache")}>Filesystem Cache</button>
+        <button type="button" roll="toolbar" className="btn btn-default" onClick={() => this.createWindow("CacheSnapshots")}>Cache Snapshots</button>
       </div>
     );
   }

@@ -4,6 +4,9 @@ use common::sense;
 
 use parent 'Vmprobe::Resource::Base::AllRemotes';
 
+use Time::HiRes;
+use Sereal::Encoder;
+
 
 sub get_initial_params {
     return {
@@ -72,6 +75,39 @@ sub cmd_evict_sel {
                      num_pages => $args->{num_pages},
                    },
                    sub { });
+}
+
+
+sub cmd_take_snapshot {
+    my ($self, $args) = @_;
+
+    my $remote = $self->{dispatcher}->find_remote($args->{host});
+
+    $remote->probe(
+        'cache::snapshot',
+        {
+            path => $args->{path},
+        },
+        sub {
+            my ($remote, $res) = @_;
+
+            my $data = {};
+
+            $data->{$args->{host}}->{$args->{path}} = $res;
+
+            mkdir("$ENV{HOME}/.vmprobe/");
+            mkdir("$ENV{HOME}/.vmprobe/cache-snapshots/");
+
+            die "unable to mkdir '$ENV{HOME}/.vmprobe/cache-snapshots/': $!"
+                if !-d "$ENV{HOME}/.vmprobe/cache-snapshots/";
+
+            my $filename = "$ENV{HOME}/.vmprobe/cache-snapshots/" . Time::HiRes::time() . '.snapshot';
+
+            open(my $fh, '>:raw', $filename) || die "couldn't open $filename for writing: $!";
+
+            print $fh Sereal::Encoder::encode_sereal($data, { compress => 1, });
+        }
+    );
 }
 
 

@@ -207,8 +207,8 @@ class Display extends PureComponent {
                 tip={selection_details.num_pages ? <span>Unselect all pages</span> : <span>Select all pages</span>}
               />
               &nbsp;&nbsp;
-              <Tooltip tip="Take snapshot of this path: *NOT IMPLEMENTED YET*" parent={
-                <span style={{ cursor: 'pointer' }} className="glyphicon glyphicon-camera" ariaHidden="true" />
+              <Tooltip tip="Take a snapshot of this path's cache profile" parent={
+                <span onClick={() => this.takeSnapshot.bind(this)(paths[rowIndex])} style={{ cursor: 'pointer' }} className="glyphicon glyphicon-camera" ariaHidden="true" />
               }/>
               &nbsp;&nbsp;
               <Tooltip tip="Remove this path from this window" parent={
@@ -237,6 +237,19 @@ class Display extends PureComponent {
   toggleSelect(row) {
     if (!row[2]) return;
     this.setSelection(row, this.getSelection(row) ? null : [0,1]);
+  }
+
+  takeSnapshot(row) {
+    console.log(row);
+
+    this.props.vmprobe_console.sendMsg({
+      resource: this.props.resource_id,
+      cmd: 'take_snapshot',
+      args: {
+        host: row[0],
+        path: row[1],
+      }
+    });
   }
 
   getSelection(row) {

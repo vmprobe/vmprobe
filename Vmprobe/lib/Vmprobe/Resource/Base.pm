@@ -16,9 +16,10 @@ sub new {
     };
     bless $self, $class;
 
+    my $params = $self->get_initial_params;
     my $view = $self->get_initial_view;
 
-    $view->{params} = $self->get_initial_params;
+    $view->{params} = $params;
 
     $class =~ /(\w+)$/;
     $view->{type} = $1;
@@ -26,6 +27,8 @@ sub new {
     $self->update({
         '$set' => $view,
     });
+
+    $self->on_ready();
 
     return $self;
 }
@@ -87,6 +90,7 @@ sub add_error {
 
 
 
+sub on_ready {}
 sub on_add_remote {}
 sub on_init_remote {}
 sub on_remove_remote {}

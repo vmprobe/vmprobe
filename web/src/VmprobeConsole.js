@@ -11,6 +11,7 @@ import * as ControlPanel from './windows/ControlPanel';
 import * as ServerList from './windows/ServerList';
 import * as MemInfo from './windows/MemInfo';
 import * as FsCache from './windows/FsCache';
+import * as CacheSnapshots from './windows/CacheSnapshots';
 
 
 require("../css/bootstrap.min.css");
