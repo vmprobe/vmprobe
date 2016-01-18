@@ -111,11 +111,12 @@ void file::touch(size_t start, size_t len) {
 
 void file::evict(size_t start, size_t len) {
     // Ignores errors for now...
+    // FIXME: non-linux platforms need access to the mmap in order to call msync
 
 #if defined(__linux__) || defined(__hpux)
     posix_fadvise(fd, start, len, POSIX_FADV_DONTNEED);
-#elif defined(__FreeBSD__) || defined(__sun__) || defined(__APPLE__)
-    msync(start, len, MS_INVALIDATE);
+#else
+    throw(std::runtime_error(std::string("Eviction not yet supported on this platform")));
 #endif
 }
 
