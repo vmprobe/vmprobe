@@ -48,6 +48,14 @@ my %module_build_args = (
 
   extra_compiler_flags => ['-x', 'c++', '-std=c++11', '-Ilibvmprobe'],
   extra_linker_flags => ['-Llibvmprobe', '-lstdc++', '-lvmprobe'],
+
+  meta_merge => {
+    resources => {
+      homepage => 'https://github.com/vmprobe/vmprobe',
+      bugtracker => 'https://github.com/vmprobe/vmprobe/issues',
+      repository => 'git://github.com/vmprobe/vmprobe.git',
+    },
+  },
 );
 
 
