@@ -1,4 +1,3 @@
-CXX      = g++
 AR       = ar
 W        = -Wall
 OPT      = -O2 -g
