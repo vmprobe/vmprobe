@@ -20,6 +20,7 @@ require("../css/tooltip.css");
 require("../css/window.css");
 
 
+let nextWindowZIndex = 0;
 
 export default class VmprobeConsole extends PureComponent {
   constructor(props) {
@@ -28,7 +29,6 @@ export default class VmprobeConsole extends PureComponent {
     this.state = {
       session_token: null,
       resources: {},
-      nextWindowZIndex: 1,
     };
 
     $.ajax({
@@ -93,11 +93,7 @@ export default class VmprobeConsole extends PureComponent {
 
 
   getNextWindowZIndex() {
-    let zIndex = this.state.nextWindowZIndex;
-
-    this.setState({ nextWindowZIndex: zIndex+1 });
-
-    return zIndex;
+    return nextWindowZIndex++;
   }
 
 
