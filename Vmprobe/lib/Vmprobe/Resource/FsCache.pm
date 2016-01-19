@@ -89,7 +89,7 @@ sub cmd_take_snapshot {
             path => $args->{path},
         },
         sub {
-            my ($remote, $res) = @_;
+            my ($res) = @_;
 
             my $data = {};
 
