@@ -199,12 +199,12 @@ sub show_help {
     if (-d $cmd_dir) {
         opendir(my $dh, $cmd_dir) || die "can't opendir $cmd_dir: $!";
 
-        while(readdir $dh) {
-            if (-d && !/^\./) {
-                push @sub_commands, "$_/";
-            } elsif (/\.pm$/) {
-                s/\.pm$//;
-                push @sub_commands, $_;
+        while(my $filename = readdir $dh) {
+            if (-d && $filename =~ !/^\./) {
+                push @sub_commands, "$filename/";
+            } elsif ($filename =~ /\.pm$/) {
+                $filename =~ s/\.pm$//;
+                push @sub_commands, $filename;
             }
         }
 

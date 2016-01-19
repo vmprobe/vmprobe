@@ -45,11 +45,10 @@ sub list_snapshot_dir {
 
     my $filenames_seen = {};
 
-    while(readdir $dh) {
-        next if /^[.]/;
+    while (my $filename = readdir $dh) {
+        next if $filename =~ /^[.]/;
 
-        my $filename = $_;
-        my $path = "$snapshot_dir/$_";
+        my $path = "$snapshot_dir/$filename";
         my $mtime = (stat($path))[9];
 
         $filenames_seen->{$filename} = 1;
