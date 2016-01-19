@@ -22,15 +22,16 @@ class Hostname extends PureComponent {
     const { accepts, isOver, canDrop, connectDropTarget, lastDroppedItem } = this.props;
     const isActive = isOver && canDrop;
 
-    let border;
+    let border, backgroundColor;
     if (isActive) {
       border = '2px dashed #d40000';
+      backgroundColor = '#fdd';
     } else if (canDrop) {
       border = '2px dashed black';
     }
 
     return connectDropTarget(
-      <div style={{ border }}>
+      <div style={{ border, backgroundColor }}>
         <Tooltip tip={this.props.hostname} parent={
           <span>
             <span className="glyphicon glyphicon-globe" ariaHidden="true" />
