@@ -92,8 +92,6 @@ void file::mincore(mincore_result &res) {
 }
 
 
-unsigned int junk;
-
 void file::touch(size_t start, size_t len) {
     // Ignores errors for now...
 
@@ -101,15 +99,13 @@ void file::touch(size_t start, size_t len) {
     posix_fadvise(fd, start, len, POSIX_FADV_WILLNEED);
 #endif
 
-    char my_junk = 0;
+    char junk;
 
     // FIXME: use preadv to reduce number of syscalls
-    for (size_t i = start; i < len; i += vmprobe::pageutils::pagesize()) {
+    for (size_t i = start; i < start + len; i += vmprobe::pageutils::pagesize()) {
         ssize_t ret = pread(fd, &junk, 1, i);
 
         if (ret != 1) throw(std::runtime_error("pread failed"));
-
-        junk += my_junk;
     }
 }
 
