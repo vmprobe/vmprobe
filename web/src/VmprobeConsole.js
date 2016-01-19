@@ -3,6 +3,9 @@ import $ from 'jquery';
 import React from 'react';
 import PureComponent from 'react-pure-render/component';
 
+import HTML5Backend from 'react-dnd-html5-backend';
+import { DragDropContext } from 'react-dnd';
+
 import update from './update';
 
 import * as ResourceWindow from './ResourceWindow';
@@ -22,7 +25,7 @@ require("../css/window.css");
 
 let nextWindowZIndex = 0;
 
-export default class VmprobeConsole extends PureComponent {
+class VmprobeConsole extends PureComponent {
   constructor(props) {
     super(props);
 
@@ -145,3 +148,5 @@ export default class VmprobeConsole extends PureComponent {
     this.setState({ resources: update(this.state.resources, msg) });
   }
 }
+
+export default DragDropContext(HTML5Backend)(VmprobeConsole);

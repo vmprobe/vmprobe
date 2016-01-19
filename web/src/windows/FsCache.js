@@ -5,6 +5,7 @@ import Tooltip from '../Tooltip';
 import * as util from '../util';
 import update from '../update';
 import CacheSummaryDisplay from '../CacheSummaryDisplay';
+import Hostname from '../Hostname';
 
 
 // https://github.com/facebook/fixed-data-table/blob/master/examples/SortExample.js
@@ -164,7 +165,7 @@ class Display extends PureComponent {
           header={<Cell>Remote</Cell>}
           cell={({rowIndex, ...props}) => (
             <Cell {...props}>
-              {paths[rowIndex][0]}
+              <Hostname hostname={paths[rowIndex][0]} />
             </Cell>
           )}
           width={0}

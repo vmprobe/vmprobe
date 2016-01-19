@@ -1,6 +1,8 @@
 import React from 'react';
 import PureComponent from 'react-pure-render/component';
 
+import SnapshotDraggable from '../SnapshotDraggable';
+
 import Tooltip from '../Tooltip';
 import {Table, Column, Cell} from 'fixed-data-table';
 
@@ -43,7 +45,7 @@ export class CacheSnapshots extends PureComponent {
             header={<Cell>Snapshot</Cell>}
             cell={({rowIndex, ...props}) => (
               <Cell {...props}>
-                {files[rowIndex]['filename']}
+                <SnapshotDraggable filename={files[rowIndex]['filename']} handleDrop={(hostname) => this.restoreSnapshot(files[rowIndex], hostname)} />&nbsp;
               </Cell>
             )}
             width={0}
@@ -75,5 +77,16 @@ export class CacheSnapshots extends PureComponent {
         </Table>
       </div>
     )
+  }
+
+  restoreSnapshot(row, hostname) {
+    this.props.vmprobe_console.sendMsg({
+      resource: this.props.resource_id,
+      cmd: 'restore_snapshot',
+      args: {
+        hostname: hostname,
+        snapshot_path: row['path'],
+      },
+    });
   }
 }

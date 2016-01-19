@@ -5,6 +5,7 @@ import Tooltip from '../Tooltip';
 import {Table, Column, Cell} from 'fixed-data-table';
 
 import * as util from '../util';
+import Hostname from '../Hostname';
 
 
 // Active(file) + Inactive(file) + Shmem = Cached + Buffer
@@ -63,7 +64,7 @@ export class MemInfo extends PureComponent {
             header={<Cell>Remote</Cell>}
             cell={({rowIndex, ...props}) => (
               <Cell {...props}>
-                {this.props.remotes[rowIndex]['host']}
+                <Hostname hostname={this.props.remotes[rowIndex]['host']} />
               </Cell>
             )}
             width={0}

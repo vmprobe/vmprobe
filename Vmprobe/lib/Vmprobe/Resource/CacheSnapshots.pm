@@ -57,22 +57,9 @@ sub list_snapshot_dir {
         next if exists $self->{view}->{snapshots}->{$filename} &&
                 $self->{view}->{snapshots}->{$filename}->{mtime} == $mtime;
 
-        my $summary;
+        my $snapshot_data = load_snapshot_data_from_file($path);
 
-        {
-            my $encoded_snapshot = Vmprobe::Util::load_file($path);
-            my $snapshot = Sereal::Decoder::decode_sereal($encoded_snapshot);
-
-            my @snapshot_hosts = keys %$snapshot;
-            die "expected only one host in snapshot, found " . scalar(@snapshot_hosts) . " (" . join(', ', @snapshot_hosts) . ")"
-                if @snapshot_hosts != 1;
-
-            my @snapshot_paths = keys %{ $snapshot->{$snapshot_hosts[0] } };
-            die "expected only one path in snapshot, found " . scalar(@snapshot_paths) . " (" . join(', ', @snapshot_paths) . ")"
-                if @snapshot_paths != 1;
-
-            $summary = Vmprobe::Cache::Snapshot::summarize($snapshot->{$snapshot_hosts[0]}->{$snapshot_paths[0]}->{snapshot}, 32);
-        }
+        my $summary = Vmprobe::Cache::Snapshot::summarize($snapshot_data, 32);
 
         my $file = {
             filename => $filename,
@@ -90,6 +77,41 @@ sub list_snapshot_dir {
         }
     }
 }
+
+
+
+
+
+sub cmd_restore_snapshot {
+    my ($self, $args) = @_;
+
+    my $snapshot_data = load_snapshot_data_from_file($args->{snapshot_path});
+
+    my $remote = $self->{dispatcher}->find_remote($args->{hostname});
+
+    $remote->probe('cache::restore', { snapshot => $snapshot_data, }, sub {});
+}
+
+
+
+
+sub load_snapshot_data_from_file {
+    my $path = shift;
+
+    my $encoded_snapshot = Vmprobe::Util::load_file($path);
+    my $snapshot = Sereal::Decoder::decode_sereal($encoded_snapshot);
+
+    my @snapshot_hosts = keys %$snapshot;
+    die "expected only one host in snapshot, found " . scalar(@snapshot_hosts) . " (" . join(', ', @snapshot_hosts) . ")"
+        if @snapshot_hosts != 1;
+
+    my @snapshot_paths = keys %{ $snapshot->{$snapshot_hosts[0] } };
+    die "expected only one path in snapshot, found " . scalar(@snapshot_paths) . " (" . join(', ', @snapshot_paths) . ")"
+        if @snapshot_paths != 1;
+
+    return $snapshot->{$snapshot_hosts[0]}->{$snapshot_paths[0]}->{snapshot};
+}
+
 
 
 1;

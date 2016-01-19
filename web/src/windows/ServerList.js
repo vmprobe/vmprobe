@@ -3,6 +3,7 @@ import PureComponent from 'react-pure-render/component';
 import {Table, Column, Cell} from 'fixed-data-table';
 import Tooltip from '../Tooltip';
 
+import Hostname from '../Hostname';
 
 
 
@@ -143,7 +144,7 @@ class Display extends PureComponent {
           header={<Cell>Remote</Cell>}
           cell={({rowIndex, ...props}) => (
             <Cell {...props}>
-              {this.props.remotes[rowIndex]['host']}
+              <Hostname hostname={this.props.remotes[rowIndex]['host']} />
             </Cell>
           )}
           width={0}
