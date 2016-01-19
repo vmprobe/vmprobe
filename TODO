@@ -1,11 +1,12 @@
 back-end:
+  * bug: fix memory leaks in perl process
   * detect and prevent duplicate remotes, at least for GUI
   * ensure that closing a remote will kill the connecting process
-  * fix memory leaks in perl process
   * EV not playing nice with Net:OpenSSH (not detecting child exits)
   * refactor Vmprobe::Remote to handle multiple connections
 
 web ui:
+  * bug: CacheSummaryDisplay hover a bit buggy, sometimes throws "Uncaught TypeError: Cannot read property 'num_files' of undefined:
   * should be able to drag from any part of title-bar (ie red "probe" span)
   * if connection is lost to web-server should grey out screen and show error
   * column sorting
