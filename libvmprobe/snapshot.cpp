@@ -230,7 +230,7 @@ void summary::add_element(element &elem) {
     buckets.back().num_files++;
 
     for (uint64_t i=0; i < elem.bf.num_buckets; i++) {
-        int bit_state = elem.bf.data[i >> 3] & (1 << (i & 7)) ? 1 : 0;
+        int bit_state = elem.bf.get_bit(i);
 
         if (buckets.back().num_pages >= pages_per_bucket) {
             if (buckets.size() == num_buckets) compress();
