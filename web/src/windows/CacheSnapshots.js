@@ -37,7 +37,7 @@ export class CacheSnapshots extends PureComponent {
           rowHeight={50}
           headerHeight={50}
           width={this.props.windowWidth - 1}
-          height={this.props.windowHeight - 75}
+          height={this.props.windowHeight}
         >
           <Column
             header={<Cell>Snapshot</Cell>}
