@@ -65,11 +65,12 @@ sub run_cmd_aux {
     };
 
     if ($@) {
-        if ($@ !~ m{^Can't locate}) {
+        my $path = join('/', @$full_cmd) . '.pm';
+        if ($@ !~ m{^Can't locate \S+\Q$path\E in}) {
             die "\nError compiling $full_cmd->[-1].pm:\n\n$@\n";
         }
 
-        my $msg = 'no such sub-command "' . join (' ', @$full_cmd) . '"';
+        my $msg = 'no such sub-command "' . join(' ', @$full_cmd) . '"';
         pop @$full_cmd;
         $dir =~ s{[^/]*/?$}{};
         show_help($msg, $full_cmd, $dir);
