@@ -99,7 +99,15 @@ sub load_snapshot_data_from_file {
     my $path = shift;
 
     my $encoded_snapshot = Vmprobe::Util::load_file($path);
-    my $snapshot = Sereal::Decoder::decode_sereal($encoded_snapshot);
+    my $snapshot;
+
+    eval {
+        $snapshot = Sereal::Decoder::decode_sereal($encoded_snapshot);
+    };
+
+    if ($@) {
+        die "error decoding sereal found in '$path': $@";
+    }
 
     my @snapshot_hosts = keys %$snapshot;
     die "expected only one host in snapshot, found " . scalar(@snapshot_hosts) . " (" . join(', ', @snapshot_hosts) . ")"
