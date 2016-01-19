@@ -1,15 +1,14 @@
 import React, { PropTypes } from 'react';
 import PureComponent from 'react-pure-render/component';
 
+import Tooltip from './Tooltip';
+
 import { DropTarget } from 'react-dnd';
 import DragTypes from './DragTypes';
 
 
 const hostnameDragTarget = {
   drop(props, monitor) {
-    console.log("DROPPED!!!");
-    console.log(monitor.getItem());
-    console.log(props);
     monitor.getItem().handleDrop(props.hostname);
   }
 };
@@ -25,14 +24,20 @@ class Hostname extends PureComponent {
 
     let border;
     if (isActive) {
-      border = '1px dashed #d40000';
+      border = '2px dashed #d40000';
     } else if (canDrop) {
-      border = '1px dashed black';
+      border = '2px dashed black';
     }
 
     return connectDropTarget(
       <div style={{ border }}>
-        {this.props.hostname}
+        <Tooltip tip={this.props.hostname} parent={
+          <span>
+            <span className="glyphicon glyphicon-globe" ariaHidden="true" />
+            &nbsp;
+            {this.props.hostname}
+          </span>
+        }/>
       </div>
     );
   }
