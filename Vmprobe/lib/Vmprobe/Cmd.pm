@@ -131,6 +131,24 @@ sub run_cmd_aux {
     }
 
 
+    if (defined &{ "${cmd_long}::validate" }) {
+        my $validate = \&{ "${cmd_long}::validate" };
+
+        eval {
+            $validate->();
+        };
+
+        my $err = $@;
+
+        if ($err) {
+            $err =~ s/at \S+ line \d+\.\s*\z//;
+
+            show_help("validation failure: $err", $full_cmd, $dir);
+            exit 1;
+        }
+    }
+
+
     $opt->{$cmd_short} = $o;
 
     if (defined $next_cmd) {

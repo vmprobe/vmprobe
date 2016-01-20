@@ -66,13 +66,13 @@ sub run {
     }
 
 
-    my $paths = opt('vmprobe::cache')->{path};
+    my $path = opt('vmprobe::cache')->{path};
 
-    if (@$paths == 0) {
+    if (!defined $path) {
         if (defined $snapshot_a) {
-            $paths = [keys %$snapshot_a];
+            $path = $snapshot_a->{path};
         } else {
-            die "must specify one or more paths";
+            die "must specify a path";
         }
     }
 
@@ -81,7 +81,7 @@ sub run {
 
     my $data = {};
 
-    foreach my $path (@$paths) {
+    if (defined $path) {
         Vmprobe::Poller::poll({
             remotes => opt('vmprobe')->{remote},
             probe_name => 'cache::snapshot',
@@ -93,9 +93,9 @@ sub run {
                 $data->{$remote->{host}}->{$path} = $result;
             },
         });
-    }
 
-    Vmprobe::Poller::wait();
+        Vmprobe::Poller::wait();
+    }
 
 
     if (!defined $snapshot_a && !defined $snapshot_b) {

@@ -24,6 +24,11 @@ opt:
 };
 
 
+sub validate {
+    die "must specify vmprobe cache --path"
+        if !exists opt('vmprobe::cache')->{path};
+}
+
 
 sub run {
     my ($term_cols, $term_rows) = Vmprobe::Util::term_dims();

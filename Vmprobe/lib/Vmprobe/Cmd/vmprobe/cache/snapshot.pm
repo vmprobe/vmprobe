@@ -20,6 +20,11 @@ opt:
 
 };
 
+sub validate {
+    die "must specify vmprobe cache --path"
+        if !exists opt('vmprobe::cache')->{path};
+}
+
 
 sub run {
     my $data;

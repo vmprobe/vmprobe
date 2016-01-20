@@ -13,6 +13,12 @@ doc: Evicts files out of memory.
 };
 
 
+sub validate {
+    die "must specify vmprobe cache --path"
+        if !exists opt('vmprobe::cache')->{path};
+}
+
+
 sub run {
     Vmprobe::Poller::poll({
         remotes => opt('vmprobe')->{remote},

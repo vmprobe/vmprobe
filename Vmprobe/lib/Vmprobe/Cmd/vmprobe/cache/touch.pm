@@ -13,6 +13,12 @@ doc: Loads files from disk into memory.
 };
 
 
+sub validate {
+    die "must specify vmprobe cache --path"
+        if !exists opt('vmprobe::cache')->{path};
+}
+
+
 sub run {
     Vmprobe::Poller::poll({
         remotes => opt('vmprobe')->{remote},
