@@ -48,22 +48,26 @@ sub list_snapshot_dir {
     while (my $filename = readdir $dh) {
         next if $filename =~ /^[.]/;
 
-        my $path = "$snapshot_dir/$filename";
-        my $mtime = (stat($path))[9];
+        my $snapshot_path = "$snapshot_dir/$filename";
+        my $mtime = (stat($snapshot_path))[9];
 
         $filenames_seen->{$filename} = 1;
 
         next if exists $self->{view}->{snapshots}->{$filename} &&
                 $self->{view}->{snapshots}->{$filename}->{mtime} == $mtime;
 
-        my $snapshot = load_snapshot_data_from_file($path);
+        my $snapshot = load_snapshot_data_from_file($snapshot_path);
 
         my $summary = Vmprobe::Cache::Snapshot::summarize($snapshot->{snapshot}, 32);
 
         my $file = {
             filename => $filename,
-            path => $path,
+            snapshot_path => $snapshot_path,
             mtime => $mtime,
+
+            host => $snapshot->{host},
+            path => $snapshot->{path},
+
             summary => $summary,
         };
 

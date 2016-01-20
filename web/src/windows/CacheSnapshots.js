@@ -52,6 +52,17 @@ export class CacheSnapshots extends PureComponent {
             flexGrow={1}
           />
           <Column
+            header={<Cell>Source</Cell>}
+            cell={({rowIndex, ...props}) => (
+              <Cell {...props}>
+                <div>{files[rowIndex]['host']}</div>
+                <div>{files[rowIndex]['path']}</div>
+              </Cell>
+            )}
+            width={0}
+            flexGrow={1}
+          />
+          <Column
             header={<Cell>Time</Cell>}
             cell={({rowIndex, ...props}) => (
               <Cell {...props}>
@@ -67,7 +78,7 @@ export class CacheSnapshots extends PureComponent {
               <Cell {...props}>
                 <CacheSummaryDisplay
                   summary={files[rowIndex]['summary']}
-                  width={(this.props.windowWidth / 3) - 30}
+                  width={(this.props.windowWidth / 4) - 30}
                 />
               </Cell>
             )}
@@ -85,7 +96,7 @@ export class CacheSnapshots extends PureComponent {
       cmd: 'restore_snapshot',
       args: {
         hostname: hostname,
-        snapshot_path: row['path'],
+        snapshot_path: row['snapshot_path'],
       },
     });
   }
