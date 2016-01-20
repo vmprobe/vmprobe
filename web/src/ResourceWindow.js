@@ -18,7 +18,7 @@ export class ResourceWindow extends PureComponent {
       let child = React.Children.only(this.props.children);
 
     this.state = {
-      width: child.props['defaultWidth'] || 400,
+      width: child.props['defaultWidth'] || 600,
       height: child.props['defaultHeight'] || 400,
       zIndex: this.props.getNextWindowZIndex(),
 
