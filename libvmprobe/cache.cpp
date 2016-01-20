@@ -34,7 +34,7 @@ void touch(std::string path, uint64_t start_page, uint64_t end_page) {
         vmprobe::cache::file f(filename);
 
         f.advise(SEQUENTIAL);
-        f.touch(vmprobe::pageutils::pages2bytes(this_start_page), vmprobe::pageutils::pages2bytes(this_end_page));
+        f.touch(vmprobe::pageutils::pages2bytes(this_start_page), vmprobe::pageutils::pages2bytes(this_end_page) - vmprobe::pageutils::pages2bytes(this_start_page));
         f.advise(NORMAL);
     });
 
@@ -65,7 +65,7 @@ void evict(std::string path, uint64_t start_page, uint64_t end_page) {
         vmprobe::cache::file f(filename);
 
         f.advise(RANDOM);
-        f.evict(vmprobe::pageutils::pages2bytes(this_start_page), vmprobe::pageutils::pages2bytes(this_end_page));
+        f.evict(vmprobe::pageutils::pages2bytes(this_start_page), vmprobe::pageutils::pages2bytes(this_end_page) - vmprobe::pageutils::pages2bytes(this_start_page));
         f.advise(NORMAL);
     });
 
