@@ -2,7 +2,6 @@ back-end:
   * bug: fix memory leaks in perl process
   * detect and prevent duplicate remotes, at least for GUI
   * ensure that closing a remote will kill the connecting process
-  * EV not playing nice with Net:OpenSSH (not detecting child exits)
   * refactor Vmprobe::Remote to handle multiple connections
 
 web ui:
@@ -17,6 +16,7 @@ cmd line:
   * output should always be in deterministic order (usually by specified remote order)
     * sortable
   * example use-cases in --help output
+  * fix vmprobe cache diff
 
 
 
@@ -25,12 +25,11 @@ memory info:
 
 
 fs cache:
-  * implement locking/snapshots
+  * implement locking
 
 
 
 new windows:
-  * saved snapshots
   * cpu info
   * process viewer "like top(1)"
     * allows throttling, renice, cpu affinity
