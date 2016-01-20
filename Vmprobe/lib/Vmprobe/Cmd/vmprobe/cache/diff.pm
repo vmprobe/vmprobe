@@ -10,6 +10,9 @@ use Vmprobe::Cache::Snapshot;
 use Sereal::Decoder;
 
 
+BEGIN { die "snapshot diffing is currently broken" }
+
+
 our $spec = q{
 
 doc: Shows the differences between two snapshots.

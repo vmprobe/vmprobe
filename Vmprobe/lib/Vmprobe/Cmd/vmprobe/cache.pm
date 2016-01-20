@@ -8,10 +8,9 @@ doc: Inspect or manipulate the file-system cache.
 
 opt:
     path:
-        type: Str[]
+        type: Str
         alias: p
-        min_length: 1
-        doc: Path(s) to files or directories. The virtual memory referred to by sub-commands is the contents of these files, or all files beneath these directories.
+        doc: Path to files or directories. The virtual memory referred to by sub-commands is the contents of this file, or, if the path refers to a directory, all files beneath this directory.
 
 };
 

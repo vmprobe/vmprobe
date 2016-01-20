@@ -28,43 +28,40 @@ opt:
 sub run {
     my ($term_cols, $term_rows) = Vmprobe::Util::term_dims();
 
+    my $path = opt('vmprobe::cache')->{path};
+
     my $data = {};
 
-    foreach my $path (@{ opt('vmprobe::cache')->{path} }) {
-        Vmprobe::Poller::poll({
-            remotes => opt('vmprobe')->{remote},
-            probe_name => 'cache::summary',
-            args => {
-                path => $path,
-                buckets => $term_cols - 6,
-            },
-            cb => sub {
-                my ($remote, $res) = @_;
-                $data->{$remote->{host}}->{$path} = $res;
-            },
-        });
-    }
+    Vmprobe::Poller::poll({
+        remotes => opt('vmprobe')->{remote},
+        probe_name => 'cache::summary',
+        args => {
+            path => $path,
+            buckets => $term_cols - 6,
+        },
+        cb => sub {
+            my ($remote, $res) = @_;
+            $data->{$remote->{host}} = $res;
+        },
+    });
 
     Vmprobe::Poller::wait;
 
 
     foreach my $host (keys %$data) {
-        say $host;
-        foreach my $path (keys %{ $data->{$host} }) {
-            my $chart = '';
-            my $resident = 0;
-            my $pages = 0;
+        my $chart = '';
+        my $resident = 0;
+        my $pages = 0;
 
-            foreach my $block (@{ $data->{$host}->{$path}->{summary} }) {
-                $chart .= render_block($block);
-                $resident += $block->{num_resident};
-                $pages += $block->{num_pages};
-            }
-
-            say "  $path";
-            say "    $resident/$pages (", pages2size($resident), "/", pages2size($pages), ")";
-            say "    [$chart]";
+        foreach my $block (@{ $data->{$host}->{summary} }) {
+            $chart .= render_block($block);
+            $resident += $block->{num_resident};
+            $pages += $block->{num_pages};
         }
+
+        say "  $host:$path";
+        say "    $resident/$pages (", pages2size($resident), "/", pages2size($pages), ")";
+        say "    [$chart]";
     }
 }
 

@@ -30,23 +30,15 @@ sub run {
     my $encoded_snapshot = Vmprobe::Util::load_file(opt->{input} // '-');
     my $snapshot = Sereal::Decoder::decode_sereal($encoded_snapshot);
 
-    my @snapshot_hosts = keys %$snapshot;
-    die "expected only one host in snapshot, found " . scalar(@snapshot_hosts) . " (" . join(', ', @snapshot_hosts) . ")"
-        if @snapshot_hosts != 1;
-
-    my $snapshot_paths = $snapshot->{$snapshot_hosts[0]};
-
     ## Apply snapshot
 
-    foreach my $path (keys %$snapshot_paths) {
-        Vmprobe::Poller::poll({
-            remotes => opt('vmprobe')->{remote},
-            probe_name => 'cache::restore',
-            args => {
-                 snapshot => $snapshot_paths->{$path}->{snapshot},
-            },
-        });
-    }
+    Vmprobe::Poller::poll({
+        remotes => opt('vmprobe')->{remote},
+        probe_name => 'cache::restore',
+        args => {
+             snapshot => $snapshot->{snapshot},
+        },
+    });
 
     Vmprobe::Poller::wait;
 }

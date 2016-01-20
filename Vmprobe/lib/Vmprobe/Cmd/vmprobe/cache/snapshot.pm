@@ -22,21 +22,26 @@ opt:
 
 
 sub run {
-    my $data = {};
+    my $data;
 
-    foreach my $path (@{ opt('vmprobe::cache')->{path} }) {
-        Vmprobe::Poller::poll({
-            remotes => opt('vmprobe')->{remote},
-            probe_name => 'cache::snapshot',
-            args => {
+    my $path = opt('vmprobe::cache')->{path};
+
+    Vmprobe::Poller::poll({
+        remotes => opt('vmprobe')->{remote},
+        probe_name => 'cache::snapshot',
+        args => {
+            path => $path,
+        },
+        cb => sub {
+            my ($remote, $res) = @_;
+            $data = {
+                type => 'cache-snapshot',
+                host => $remote->{host},
                 path => $path,
-            },
-            cb => sub {
-                my ($remote, $res) = @_;
-                $data->{$remote->{host}}->{$path} = $res;
-            },
-        });
-    }
+                snapshot => $res->{snapshot},
+            };
+        },
+    });
 
     Vmprobe::Poller::wait;
 

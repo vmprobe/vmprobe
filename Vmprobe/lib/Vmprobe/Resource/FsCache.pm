@@ -91,9 +91,12 @@ sub cmd_take_snapshot {
         sub {
             my ($res) = @_;
 
-            my $data = {};
-
-            $data->{$args->{host}}->{$args->{path}} = $res;
+            my $data = {
+                type => 'cache-snapshot',
+                host => $remote->{host},
+                path => $args->{path},
+                snapshot => $res->{snapshot},
+            };
 
             mkdir("$ENV{HOME}/.vmprobe/");
             mkdir("$ENV{HOME}/.vmprobe/cache-snapshots/");
