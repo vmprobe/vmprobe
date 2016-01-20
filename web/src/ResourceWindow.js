@@ -75,6 +75,34 @@ export class ResourceWindow extends PureComponent {
     }
 
 
+    let job_display;
+
+    if (child.props.jobs) {
+      let active_jobs = [];
+
+      for (let job_id of Object.keys(child.props.jobs)) {
+        let job = child.props.jobs[job_id];
+
+        active_jobs.push(
+          <Tooltip
+            key={job_id}
+            parent={
+              <span style={{ color: '#088024' }} className="glyphicon glyphicon-transfer" ariaHidden="true" />
+            }
+            tip={
+              <div>
+                <div>{job.type}</div>
+                <div>{job.desc}</div>
+              </div>
+            }
+          />
+        );
+      }
+
+      job_display = <div>{active_jobs}</div>;
+    }
+
+
     return (
       <Draggable handle=".handle" onStart={this.foreground.bind(this)}>
         <div className="resourceWindow" style={{zIndex: this.state.zIndex, width: this.state.width}}>
@@ -94,6 +122,7 @@ export class ResourceWindow extends PureComponent {
             <ResizableBox width={this.state.width} height={this.state.height} className="resourceWindowBodyResizable" onResize={this.onResize.bind(this)}>
               <div style={{ width:this.state.width, height: this.state.height }}>
                 {child}
+                {job_display}
                 {error_indicator}
               </div>
             </ResizableBox>

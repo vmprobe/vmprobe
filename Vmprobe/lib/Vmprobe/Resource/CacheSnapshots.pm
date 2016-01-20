@@ -92,7 +92,9 @@ sub cmd_restore_snapshot {
 
     my $remote = $self->{dispatcher}->find_remote($args->{hostname});
 
-    $remote->probe('cache::restore', { snapshot => $snapshot->{snapshot}, }, sub {});
+    my $job = $self->start_job('cache::restore', "Restoring snapshot $args->{snapshot_path} to $args->{hostname}");
+
+    $remote->probe('cache::restore', { snapshot => $snapshot->{snapshot}, }, sub { undef $job });
 }
 
 

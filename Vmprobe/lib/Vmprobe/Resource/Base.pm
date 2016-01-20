@@ -3,7 +3,10 @@ package Vmprobe::Resource::Base;
 use common::sense;
 use List::MoreUtils;
 use Carp;
+use Guard;
+use Time::HiRes;
 
+use Vmprobe::Util;
 use Vmprobe::ReactUpdate;
 
 
@@ -86,6 +89,27 @@ sub add_error {
     my ($self, $err_msg) = @_;
 
     $self->update({ errors => { '$push' => [ $err_msg ] } });
+}
+
+
+
+
+sub start_job {
+    my ($self, $job_type, $job_desc) = @_;
+
+    my $token = get_session_token();
+
+    my $job = {
+        type => $job_type,
+        desc => $job_desc,
+        start => Time::HiRes::time(),
+    };
+
+    $self->update({ jobs => { $token => { '$set' => $job } } });
+
+    return guard {
+        $self->update({ jobs => { '$unset' => $token } });
+    };
 }
 
 

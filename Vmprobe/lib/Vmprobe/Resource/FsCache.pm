@@ -54,13 +54,15 @@ sub cmd_touch_sel {
 
     my $remote = $self->{dispatcher}->find_remote($args->{host});
 
+    my $job = $self->start_job('cache::touch', "Touching $args->{path} on $args->{host}");
+
     $remote->probe('cache::touch',
                    {
                      path => $args->{path},
                      start_pages => $args->{start_pages},
                      num_pages => $args->{num_pages},
                    },
-                   sub { });
+                   sub { undef $job });
 }
 
 sub cmd_evict_sel {
@@ -68,13 +70,15 @@ sub cmd_evict_sel {
 
     my $remote = $self->{dispatcher}->find_remote($args->{host});
 
+    my $job = $self->start_job('cache::evict', "Evicting $args->{path} on $args->{host}");
+
     $remote->probe('cache::evict',
                    {
                      path => $args->{path},
                      start_pages => $args->{start_pages},
                      num_pages => $args->{num_pages},
                    },
-                   sub { });
+                   sub { undef $job });
 }
 
 
@@ -83,6 +87,8 @@ sub cmd_take_snapshot {
 
     my $remote = $self->{dispatcher}->find_remote($args->{host});
 
+    my $job = $self->start_job('cache::snapshot', "Taking snapshot of $args->{path} on $args->{host}");
+
     $remote->probe(
         'cache::snapshot',
         {
@@ -90,6 +96,8 @@ sub cmd_take_snapshot {
         },
         sub {
             my ($res) = @_;
+
+            undef $job;
 
             my $data = {
                 type => 'cache-snapshot',

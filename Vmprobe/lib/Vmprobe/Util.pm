@@ -3,7 +3,7 @@ package Vmprobe::Util;
 use common::sense;
 
 use Exporter 'import';
-our @EXPORT = qw(pages2size colour);
+our @EXPORT = qw(pages2size colour get_session_token);
 
 
 
@@ -115,6 +115,18 @@ sub capture_stderr (&@) {
     $code->();
 
     return $pipe_r;
+}
+
+
+
+my $generator;
+
+sub get_session_token {
+    require Session::Token;
+
+    $generator //= Session::Token->new;
+
+    return $generator->get;
 }
 
 
