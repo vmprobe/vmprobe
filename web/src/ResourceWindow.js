@@ -109,8 +109,10 @@ export class ResourceWindow extends PureComponent {
 
           <div onClick={this.foreground.bind(this)} onDoubleClick={this.toggleMinimised.bind(this)} className="resourceWindowHeader handle">
             <div className="title handle">{child.props.windowTitle}</div>
+            {job_display}
             <div className="controls">
-              <span className={"glyphicon " + (this.state.minimised ? "glyphicon-collapse-down" : "glyphicon-collapse-up")}
+              {error_indicator}
+              <span style={{ marginLeft: 20 }} className={"glyphicon " + (this.state.minimised ? "glyphicon-collapse-down" : "glyphicon-collapse-up")}
                     ariaHidden="true"
                     onClick={this.toggleMinimised.bind(this)}
               />
@@ -122,8 +124,6 @@ export class ResourceWindow extends PureComponent {
             <ResizableBox width={this.state.width} height={this.state.height} className="resourceWindowBodyResizable" onResize={this.onResize.bind(this)}>
               <div style={{ width:this.state.width, height: this.state.height }}>
                 {child}
-                {job_display}
-                {error_indicator}
               </div>
             </ResizableBox>
           </div>
