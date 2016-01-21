@@ -1,21 +1,22 @@
-#include "cache.h"
-#include "crawler.h"
-#include "file.h"
-#include "pageutils.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
+
+#include <string>
+#include <vector>
+#include <utility>
+
+#include "cache.h"
+#include "crawler.h"
+#include "pageutils.h"
 
 
 
 namespace vmprobe { namespace cache {
 
-void touch(std::string path) {
-    touch(path, 0, UINT64_MAX);
-}
-
-void touch(std::string path, uint64_t start_page, uint64_t end_page) {
+void process(std::string &path, uint64_t start_page, uint64_t end_page, std::function<void(vmprobe::cache::file &, uint64_t, uint64_t)> cb) {
     uint64_t curr_page = 0;
 
     vmprobe::crawler c([&](std::string &filename, struct ::stat &sb) {
@@ -26,19 +27,32 @@ void touch(std::string path, uint64_t start_page, uint64_t end_page) {
             return;
         }
 
-        uint64_t this_start_page = start_page < curr_page ? 0 : start_page - curr_page;
-        uint64_t this_end_page = std::min(pages, end_page - curr_page);
+        uint64_t start_byte = vmprobe::pageutils::pages2bytes(start_page < curr_page ? 0 : start_page - curr_page);
+        uint64_t end_byte = vmprobe::pageutils::pages2bytes(std::min(pages, end_page - curr_page));
 
         curr_page += pages;
 
         vmprobe::cache::file f(filename);
 
-        f.advise(SEQUENTIAL);
-        f.touch(vmprobe::pageutils::pages2bytes(this_start_page), vmprobe::pageutils::pages2bytes(this_end_page) - vmprobe::pageutils::pages2bytes(this_start_page));
-        f.advise(NORMAL);
+        cb(f, start_byte, end_byte);
     });
 
     c.crawl(path);
+}
+
+
+
+
+void touch(std::string path) {
+    touch(path, 0, UINT64_MAX);
+}
+
+void touch(std::string path, uint64_t start_page, uint64_t end_page) {
+    process(path, start_page, end_page, [&](vmprobe::cache::file &f, uint64_t start_byte, uint64_t end_byte) {
+        f.advise(advice::SEQUENTIAL);
+        f.touch(start_byte, end_byte - start_byte);
+        f.advise(advice::DEFAULT_NORMAL);
+    });
 }
 
 
@@ -47,29 +61,28 @@ void evict(std::string path) {
 }
 
 void evict(std::string path, uint64_t start_page, uint64_t end_page) {
-    uint64_t curr_page = 0;
+    process(path, start_page, end_page, [&](vmprobe::cache::file &f, uint64_t start_byte, uint64_t end_byte) {
+        f.advise(advice::RANDOM);
+        f.evict(start_byte, end_byte - start_byte);
+        f.advise(advice::DEFAULT_NORMAL);
+    });
+}
 
-    vmprobe::crawler c([&](std::string &filename, struct ::stat &sb) {
-        uint64_t pages = vmprobe::pageutils::bytes2pages(sb.st_size);
 
-        if (curr_page + pages < start_page || curr_page > end_page) {
-            curr_page += pages;
-            return;
-        }
 
-        uint64_t this_start_page = start_page < curr_page ? 0 : start_page - curr_page;
-        uint64_t this_end_page = std::min(pages, end_page - curr_page);
+lock_context *lock_and_fork(std::string path, uint64_t start_page, uint64_t end_page) {
+    lock_context *l = new lock_context();
 
-        curr_page += pages;
+    process(path, start_page, end_page, [&](vmprobe::cache::file &f, uint64_t start_byte, uint64_t end_byte) {
+        f.lock(start_byte, end_byte - start_byte);
 
-        vmprobe::cache::file f(filename);
+        f.close();
 
-        f.advise(RANDOM);
-        f.evict(vmprobe::pageutils::pages2bytes(this_start_page), vmprobe::pageutils::pages2bytes(this_end_page) - vmprobe::pageutils::pages2bytes(this_start_page));
-        f.advise(NORMAL);
+        l->files.push_back(std::move(f));
     });
 
-    c.crawl(path);
+    return l;
 }
+
 
 }}

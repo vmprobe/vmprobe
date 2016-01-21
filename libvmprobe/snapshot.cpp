@@ -156,7 +156,7 @@ static void restore_residency_state(vmprobe::cache::file &file, bitfield &bf) {
 
     size_t mem_len = file.get_size();
 
-    file.advise(RANDOM);
+    file.advise(advice::RANDOM);
 
     for (uint64_t i=0; i < bf.num_buckets; i++) {
         int bit_state = bf.get_bit(i);
@@ -182,7 +182,7 @@ static void restore_residency_state(vmprobe::cache::file &file, bitfield &bf) {
         else file.evict(range_start, range_end - range_start);
     }
 
-    file.advise(NORMAL);
+    file.advise(advice::DEFAULT_NORMAL);
 }
 
 void restore(char *ptr, size_t len) {

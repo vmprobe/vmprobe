@@ -15,8 +15,8 @@ class mincore_result {
     uint64_t resident_pages;
 };
 
-enum access_advice {
-    NORMAL,
+enum class advice {
+    DEFAULT_NORMAL,
     SEQUENTIAL,
     RANDOM,
 };
@@ -32,7 +32,10 @@ class file {
     void mincore(mincore_result &map);
     void touch(size_t start, size_t len);
     void evict(size_t start, size_t len);
-    void advise(access_advice advice);
+    void lock(size_t start, size_t len);
+    void advise(advice a);
+    void close();
+    void munmap();
 
     size_t get_size();
 

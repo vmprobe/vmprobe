@@ -145,8 +145,8 @@ class Display extends PureComponent {
             <span onClick={() => this.evictSelection(paths)} style={{ cursor: 'pointer' }} className="glyphicon glyphicon glyphicon-save" ariaHidden="true" />
           }/>
           &nbsp;
-          <Tooltip tip="Lock selection: Locks pages into memory *NOT IMPLEMENTED YET*" parent={
-            <span style={{ cursor: 'pointer' }} className="glyphicon glyphicon glyphicon-lock" ariaHidden="true" />
+          <Tooltip tip="Lock selection: Locks pages into memory" parent={
+            <span onClick={() => this.lockSelection(paths)} style={{ cursor: 'pointer' }} className="glyphicon glyphicon glyphicon-lock" ariaHidden="true" />
           }/>
         </div>
       );
@@ -332,6 +332,38 @@ class Display extends PureComponent {
         msgs.push({
           resource: this.props.resource_id,
           cmd: 'evict_sel',
+          args: {
+            host: row[0],
+            path: row[1],
+            num_pages: num_pages,
+            start_pages: start_pages,
+          },
+        });
+      }
+    }
+
+    if (msgs.length) this.props.vmprobe_console.sendMsgs(msgs);
+  }
+
+  lockSelection(paths) {
+    let msgs = [];
+
+    for (let row of paths) {
+      let selection = this.selectionToIndices(row);
+
+      if (selection) {
+        let start_pages = 0, num_pages = 0;
+
+        for (let i = 0; i <= selection[1]; i++) {
+          let summary = row[2][i];
+
+          if (i < selection[0]) start_pages += summary.num_pages;
+          else num_pages += summary.num_pages;
+        }
+
+        msgs.push({
+          resource: this.props.resource_id,
+          cmd: 'lock_sel',
           args: {
             host: row[0],
             path: row[1],

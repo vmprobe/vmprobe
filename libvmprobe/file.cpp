@@ -47,10 +47,19 @@ file::file(file &&other) {
 }
 
 file::~file() {
-    if (fd != -1) close(fd);
-    fd = -1;
+    munmap();
+    close();
+}
 
-    if (mmap_ptr) munmap(mmap_ptr, file_size);
+
+void file::close() {
+    if (fd != -1) ::close(fd);
+    fd = -1;
+}
+
+
+void file::munmap() {
+    if (mmap_ptr) ::munmap(mmap_ptr, file_size);
     mmap_ptr = nullptr;
 }
 
@@ -101,7 +110,7 @@ void file::touch(size_t start, size_t len) {
 
     char junk;
 
-    // FIXME: use preadv to reduce number of syscalls
+    // FIXME: benchmark which is faster: pread or mmap+faulting in pages (i bet it's pread)
     for (size_t i = start; i < start + len; i += vmprobe::pageutils::pagesize()) {
         ssize_t ret = pread(fd, &junk, 1, i);
 
@@ -120,16 +129,28 @@ void file::evict(size_t start, size_t len) {
 #endif
 }
 
-void file::advise(access_advice advice) {
+void file::lock(size_t start, size_t len) {
+    mmap();
+
+    if (mlock(mmap_ptr + start, len)) {
+        if (errno == ENOMEM) {
+            throw(std::runtime_error(std::string("Failed to mlock: exceeded allowed amount of locked memory")));
+        } else {
+            throw(std::runtime_error(std::string("Failed to mlock: ") + std::string(strerror(errno))));
+        }
+    }
+}
+
+void file::advise(advice a) {
 #if defined(__linux__) || defined(__hpux)
-    switch(advice) {
-        case NORMAL:
+    switch(a) {
+        case advice::DEFAULT_NORMAL:
             posix_fadvise(fd, 0, file_size, POSIX_FADV_NORMAL);
             break;
-        case SEQUENTIAL:
+        case advice::SEQUENTIAL:
             posix_fadvise(fd, 0, file_size, POSIX_FADV_SEQUENTIAL);
             break;
-        case RANDOM:
+        case advice::RANDOM:
             posix_fadvise(fd, 0, file_size, POSIX_FADV_RANDOM);
             break;
     }

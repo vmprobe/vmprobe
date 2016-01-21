@@ -3,6 +3,7 @@ back-end:
   * detect and prevent duplicate remotes, at least for GUI
   * ensure that closing a remote will kill the connecting process
   * refactor Vmprobe::Remote to handle multiple connections
+  * detect when SSH keys aren't setup, show useful error msg
 
 web ui:
   * bug: CacheSummaryDisplay hover a bit buggy, sometimes throws "Uncaught TypeError: Cannot read property 'num_files' of undefined:

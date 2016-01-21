@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include <stdexcept>
+#include <vector>
 
 #include "cache.h"
 
@@ -96,6 +97,30 @@ evict_page_range(path_sv, start_page, end_page)
 
         try {
             vmprobe::cache::evict(path, start_page, end_page);
+        } catch(std::runtime_error &e) {
+            croak(e.what());
+        }
+
+
+
+void
+lock_and_fork_page_range(path_sv, start_page, end_page)
+        SV *path_sv
+        unsigned long start_page
+        unsigned long end_page
+    CODE:
+        char *path_p;
+        size_t path_len;
+
+        path_len = SvCUR(path_sv);
+        path_p = SvPV(path_sv, path_len);
+
+        std::string path(path_p, path_len);
+
+        static std::vector<vmprobe::cache::lock_context *> locks;
+
+        try {
+            locks.push_back(vmprobe::cache::lock_and_fork(path, start_page, end_page));
         } catch(std::runtime_error &e) {
             croak(e.what());
         }

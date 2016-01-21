@@ -81,6 +81,22 @@ sub cmd_evict_sel {
                    sub { undef $job });
 }
 
+sub cmd_lock_sel {
+    my ($self, $args) = @_;
+
+    my $remote = $self->{dispatcher}->find_remote($args->{host});
+
+    my $job = $self->start_job('cache::lock', "Locking $args->{path} on $args->{host}");
+
+    $remote->probe('cache::lock',
+                   {
+                     path => $args->{path},
+                     start_pages => $args->{start_pages},
+                     num_pages => $args->{num_pages},
+                   },
+                   sub { undef $job });
+}
+
 
 sub cmd_take_snapshot {
     my ($self, $args) = @_;
