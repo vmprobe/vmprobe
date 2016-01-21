@@ -4,6 +4,9 @@ back-end:
   * ensure that closing a remote will kill the connecting process
   * refactor Vmprobe::Remote to handle multiple connections
   * detect when SSH keys aren't setup, show useful error msg
+  * when mlock() fails due to exceeding rlimit, some memory is still locked (!?)
+    - this goes against what manpage says: look into this
+    - note this doesn't affect vmprobe since we tear down the mmap in case of error so it removes lock regardless
 
 web ui:
   * bug: CacheSummaryDisplay hover a bit buggy, sometimes throws "Uncaught TypeError: Cannot read property 'num_files' of undefined:

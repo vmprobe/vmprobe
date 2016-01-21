@@ -74,7 +74,7 @@ lock_context *lock(std::string path) {
 }
 
 lock_context *lock(std::string path, uint64_t start_page, uint64_t end_page) {
-    lock_context *l = new lock_context();
+    lock_context l;
 
     process(path, start_page, end_page, [&](vmprobe::cache::file &f, uint64_t start_byte, uint64_t end_byte) {
         f.advise(advice::RANDOM);
@@ -83,10 +83,10 @@ lock_context *lock(std::string path, uint64_t start_page, uint64_t end_page) {
 
         f.close();
 
-        l->files.push_back(std::move(f));
+        l.files.push_back(std::move(f));
     });
 
-    return l;
+    return new lock_context(std::move(l));
 }
 
 
