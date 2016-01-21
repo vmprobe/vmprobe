@@ -11,6 +11,7 @@ web ui:
   * column sorting
   * way to save and reload settings
   * time-series plotting
+  * left-align column contents
 
 cmd line:
   * output should always be in deterministic order (usually by specified remote order)

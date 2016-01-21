@@ -2,6 +2,7 @@ import React from 'react';
 import PureComponent from 'react-pure-render/component';
 
 import SnapshotDraggable from '../SnapshotDraggable';
+import Time from 'react-time';
 
 import Tooltip from '../Tooltip';
 import {Table, Column, Cell} from 'fixed-data-table';
@@ -66,7 +67,7 @@ export class CacheSnapshots extends PureComponent {
             header={<Cell>Time</Cell>}
             cell={({rowIndex, ...props}) => (
               <Cell {...props}>
-                {"" + new Date(files[rowIndex]['mtime'] * 1000)}
+                <Time value={new Date(files[rowIndex]['mtime'] * 1000)} titleFormat="YYYY/MM/DD HH:mm" relative />
               </Cell>
             )}
             width={0}  
