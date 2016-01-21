@@ -1,6 +1,7 @@
 import React from 'react';
 import PureComponent from 'react-pure-render/component';
 import {Table, Column, Cell} from 'fixed-data-table';
+import Time from 'react-time';
 import Tooltip from '../Tooltip';
 import * as util from '../util';
 import update from '../update';
@@ -30,21 +31,63 @@ export class FsCache extends PureComponent {
 
 
 
+function shallowCopyObject(x) {
+  return Object.assign(new x.constructor(), x);
+}
 
 class Adder extends PureComponent {
   render() {
+    let lock_display;
+
+    if (this.props['locks']) {
+      let locks = [];
+
+      for (let lock_id of Object.keys(this.props.locks)) {
+        let lock = shallowCopyObject(this.props.locks[lock_id]);
+        lock['lock_id'] = lock_id;
+        locks.push(lock);
+      }
+
+      locks.sort((a,b) => b.time - a.time);
+
+      lock_display = locks.map((l) => (
+        <span key={l.lock_id} style={{ marginRight: 10 }}>
+          <Tooltip
+            parent={
+              <span className="glyphicon glyphicon glyphicon-lock" ariaHidden="true" />
+            }
+            tip={
+              <div>
+                {util.prettyPrintPages(l.num_pages)} of {l.path} locked <Time value={new Date(l.time * 1000)} relative />
+              </div>
+            }
+          />
+          <Tooltip tip="Unlock" parent={
+            <span style={{ cursor: 'pointer', verticalAlign: 'super', fontSize: '60%', }}
+                  className="glyphicon glyphicon glyphicon-remove" ariaHidden="true"
+                  onClick={() => this.unlock(l.lock_id)} />
+          }/>
+        </span>
+      ));
+    }
+
     return (
       <div style={{height: 25, display: 'flex', justifyContent: 'space-between'}}>
         <form className="pathAdderForm" onSubmit={this.addPath.bind(this)}>
           <input style={{ marginLeft: 5 }} type="text" placeholder="add path" ref="path" />
         </form>
-        <div style={{ fontSize: '200%' }}>
-          <Tooltip tip="Zoom in on page cache display (more details visible, more network traffic required)" parent={
+        <div>
+          <span style={{ fontSize: '150%', marginRight: 30 }}>
+            {lock_display}
+          </span>
+          <span style={{ fontSize: '200%' }}>
+            <Tooltip tip="Zoom in on page cache display (more details visible, more network traffic required)" parent={
               <span style={{ cursor: 'pointer' }} onClick={this.zoomIn.bind(this)}className="glyphicon glyphicon-zoom-in" ariaHidden="true" />
-          }/>
-          <Tooltip tip="Zoom out on page cache display (fewer details visible, less network traffic required)" parent={
-            <span style={{ cursor: 'pointer' }} onClick={this.zoomOut.bind(this)} className="glyphicon glyphicon-zoom-out" ariaHidden="true" />
-          }/>
+            }/>
+            <Tooltip tip="Zoom out on page cache display (fewer details visible, less network traffic required)" parent={
+              <span style={{ cursor: 'pointer' }} onClick={this.zoomOut.bind(this)} className="glyphicon glyphicon-zoom-out" ariaHidden="true" />
+            }/>
+         </span>
         </div>
       </div>
     );
@@ -77,6 +120,16 @@ class Adder extends PureComponent {
       this.props.resource_id,
       { buckets: { $set: Math.max(1, Math.floor(this.props.params.buckets / 2)) } },
     );
+  }
+
+  unlock(lock_id) {
+    this.props.vmprobe_console.sendMsg({
+      resource: this.props.resource_id,
+      cmd: 'unlock',
+      args: {
+        lock_id: lock_id,
+      }
+    });
   }
 }
 

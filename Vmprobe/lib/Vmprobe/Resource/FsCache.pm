@@ -6,6 +6,7 @@ use parent 'Vmprobe::Resource::Base::AllRemotes';
 
 use Time::HiRes;
 use Sereal::Encoder;
+use Guard;
 
 
 sub get_initial_params {
@@ -88,15 +89,52 @@ sub cmd_lock_sel {
 
     my $job = $self->start_job('cache::lock', "Locking $args->{path} on $args->{host}");
 
-    $remote->probe('cache::lock',
-                   {
-                     path => $args->{path},
-                     start_pages => $args->{start_pages},
-                     num_pages => $args->{num_pages},
-                   },
-                   sub { undef $job });
+    $remote->probe(
+        'cache::lock',
+        {
+          path => $args->{path},
+          start_pages => $args->{start_pages},
+          num_pages => $args->{num_pages},
+        },
+        sub {
+            my ($res) = @_;
+            undef $job;
+
+            my $lock_id = $res->{lock_id};
+
+            $self->{locks}->{$lock_id} = guard {
+                $remote->probe('cache::unlock', { lock_id => $lock_id, }, sub {});
+            };
+
+            $self->update({
+                locks => {
+                    $lock_id => {
+                        '$set' => {
+                            path => $args->{path},
+                            time => Time::HiRes::time(),
+                            num_pages => $args->{num_pages},
+                        }
+                    },
+                }
+            });
+        }
+    );
 }
 
+
+sub cmd_unlock {
+    my ($self, $args) = @_;
+
+    my $lock_id = $args->{lock_id};
+
+    delete $self->{locks}->{$lock_id};
+
+    $self->update({
+        locks => {
+            '$unset' => $lock_id,
+        },
+    });
+}
 
 sub cmd_take_snapshot {
     my ($self, $args) = @_;

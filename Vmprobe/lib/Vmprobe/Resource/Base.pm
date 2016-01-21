@@ -75,6 +75,15 @@ sub get_remote_position {
 }
 
 
+
+sub shutdown {
+    my ($self) = @_;
+
+    $self->{zombie} = 1;
+}
+
+
+
 sub cmd_params {
     my ($self, $args) = @_;
 

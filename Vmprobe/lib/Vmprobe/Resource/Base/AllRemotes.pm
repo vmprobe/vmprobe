@@ -84,7 +84,7 @@ sub _update_polls {
     $new_polls = [ $new_polls ] if ref($new_polls) ne 'ARRAY';
 
     foreach my $poll (@$new_polls) {
-        my $handler; $handler = sub {
+        $poll->{handler} = sub {
             undef $poll->{timer};
 
             $remote->probe($poll->{probe_name}, $poll->{args}, sub {
@@ -94,11 +94,11 @@ sub _update_polls {
 
                 $poll->{on_result}->($result);
 
-                $poll->{timer} = AE::timer($poll->{frequency} // 1, 0, $handler);
+                $poll->{timer} = AE::timer($poll->{frequency} // 1, 0, $poll->{handler});
             });
         };
 
-        $handler->();
+        $poll->{handler}->();
     }
 
     $self->{remotes}->{$remote->{host}}->{polls} = $new_polls;
@@ -110,9 +110,24 @@ sub _stop_polls {
 
     foreach my $poll (@{ $self->{remotes}->{$remote->{host}}->{polls} }) {
         $poll->{stop} = 1;
+        delete $poll->{timer};
+        delete $poll->{handler};
+        delete $poll->{on_result};
     }
 
     delete $self->{remotes}->{$remote->{host}}->{polls};
+}
+
+
+
+sub shutdown {
+    my ($self) = @_;
+
+    $self->SUPER::shutdown();
+
+    foreach my $remote (@{ $self->{dispatcher}->{remotes} }) {
+        $self->on_remove_remote($remote);
+    }
 }
 
 

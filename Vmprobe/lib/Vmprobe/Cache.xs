@@ -16,6 +16,13 @@ extern "C" {
 #include "cache.h"
 
 
+
+
+typedef vmprobe::cache::lock_context * Vmprobe_Cache_LockContext;
+
+
+
+
 MODULE = Vmprobe::Cache        PACKAGE = Vmprobe::Cache
 
 PROTOTYPES: ENABLE
@@ -103,7 +110,8 @@ evict_page_range(path_sv, start_page, end_page)
 
 
 
-void
+
+Vmprobe_Cache_LockContext
 lock_page_range(path_sv, start_page, end_page)
         SV *path_sv
         unsigned long start_page
@@ -117,10 +125,25 @@ lock_page_range(path_sv, start_page, end_page)
 
         std::string path(path_p, path_len);
 
-        static std::vector<vmprobe::cache::lock_context *> locks;
+        vmprobe::cache::lock_context *l;
 
         try {
-            locks.push_back(vmprobe::cache::lock(path, start_page, end_page));
+            l = vmprobe::cache::lock(path, start_page, end_page);
         } catch(std::runtime_error &e) {
             croak(e.what());
         }
+
+        RETVAL = l;
+    OUTPUT:
+        RETVAL
+
+
+
+MODULE = Vmprobe::Cache         PACKAGE = Vmprobe::Cache::LockContext
+PROTOTYPES: ENABLE
+
+void
+DESTROY(l)
+        Vmprobe_Cache_LockContext l
+    CODE:
+        delete l;

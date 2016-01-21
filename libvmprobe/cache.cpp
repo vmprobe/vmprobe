@@ -77,7 +77,9 @@ lock_context *lock(std::string path, uint64_t start_page, uint64_t end_page) {
     lock_context *l = new lock_context();
 
     process(path, start_page, end_page, [&](vmprobe::cache::file &f, uint64_t start_byte, uint64_t end_byte) {
+        f.advise(advice::RANDOM);
         f.lock(start_byte, end_byte - start_byte);
+        f.advise(advice::DEFAULT_NORMAL);
 
         f.close();
 

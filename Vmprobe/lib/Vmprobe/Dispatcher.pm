@@ -152,7 +152,7 @@ sub close_resource {
 
     $self->queue_update({ '$unset' => $resource_id });
 
-    $self->{resources}->{$resource_id}->{zombie} = 1;
+    $self->{resources}->{$resource_id}->shutdown();
 
     delete $self->{resources}->{$resource_id};
 }
