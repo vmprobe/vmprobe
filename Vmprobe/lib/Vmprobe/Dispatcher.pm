@@ -2,7 +2,6 @@ package Vmprobe::Dispatcher;
 
 use common::sense;
 
-use Session::Token;
 use List::MoreUtils;
 use Callback::Frame;
 
@@ -15,8 +14,6 @@ sub new {
 
     my $self = {};
     bless $self, $class;
-
-    $self->{token_generator} = Session::Token->new;
 
     return $self;
 }
@@ -82,7 +79,7 @@ sub remove_remote {
 sub new_session {
     my ($self) = @_;
 
-    my $token = $self->{token_generator}->get;
+    my $token = get_session_token();
 
     my $session = {
         msgs => [],
@@ -134,7 +131,7 @@ sub new_resource {
 
     eval "require $package_name" || die "unable to load package $package_name: $@";
 
-    my $token = $self->{token_generator}->get;
+    my $token = get_session_token();
 
     my $resource = $package_name->new($self, $token);
 

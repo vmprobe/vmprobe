@@ -119,12 +119,11 @@ sub capture_stderr (&@) {
 
 
 
-my $generator;
-
 sub get_session_token {
-    require Session::Token;
-
-    $generator //= Session::Token->new;
+    state $generator = do {
+        require Session::Token;
+        Session::Token->new
+    };
 
     return $generator->get;
 }

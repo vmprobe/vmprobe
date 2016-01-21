@@ -14,7 +14,6 @@ use Plack::Middleware::Deflater;
 use Plack::Middleware::Static;
 use Plack::Middleware::Rewrite;
 use JSON::XS;
-use Session::Token;
 
 use Vmprobe;
 use Vmprobe::Util;
