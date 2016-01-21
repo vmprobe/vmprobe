@@ -104,7 +104,7 @@ evict_page_range(path_sv, start_page, end_page)
 
 
 void
-lock_and_fork_page_range(path_sv, start_page, end_page)
+lock_page_range(path_sv, start_page, end_page)
         SV *path_sv
         unsigned long start_page
         unsigned long end_page
@@ -120,7 +120,7 @@ lock_and_fork_page_range(path_sv, start_page, end_page)
         static std::vector<vmprobe::cache::lock_context *> locks;
 
         try {
-            locks.push_back(vmprobe::cache::lock_and_fork(path, start_page, end_page));
+            locks.push_back(vmprobe::cache::lock(path, start_page, end_page));
         } catch(std::runtime_error &e) {
             croak(e.what());
         }

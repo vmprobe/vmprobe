@@ -18,6 +18,7 @@ struct lock_context {
     std::vector<vmprobe::cache::file> files;
 };
 
-lock_context *lock_and_fork(std::string path, uint64_t start_page, uint64_t end_page);
+lock_context *lock(std::string path);
+lock_context *lock(std::string path, uint64_t start_page, uint64_t end_page);
 
 }}

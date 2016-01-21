@@ -69,8 +69,11 @@ void evict(std::string path, uint64_t start_page, uint64_t end_page) {
 }
 
 
+lock_context *lock(std::string path) {
+    return lock(path, 0, UINT64_MAX);
+}
 
-lock_context *lock_and_fork(std::string path, uint64_t start_page, uint64_t end_page) {
+lock_context *lock(std::string path, uint64_t start_page, uint64_t end_page) {
     lock_context *l = new lock_context();
 
     process(path, start_page, end_page, [&](vmprobe::cache::file &f, uint64_t start_byte, uint64_t end_byte) {
