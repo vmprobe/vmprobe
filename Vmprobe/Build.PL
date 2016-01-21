@@ -1,3 +1,5 @@
+use 5.010;
+
 use strict;
 
 use lib q(.);
