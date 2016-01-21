@@ -69,7 +69,7 @@ sub update {
         my $output = { %$view };
 
         foreach my $k (keys %$update) {
-            $output->{$k} = __SUB__->($output->{$k}, $update->{$k});
+            $output->{$k} = update->($output->{$k}, $update->{$k});
         }
 
         return $output;
@@ -78,7 +78,7 @@ sub update {
 
         foreach my $k (keys %$update) {
             die "non-numeric key in array update" if $k !~ /^\d+$/;
-            $output->[$k] = __SUB__->($output->[$k], $update->{$k});
+            $output->[$k] = update->($output->[$k], $update->{$k});
         }
 
         return $output;
