@@ -21,6 +21,13 @@ sub new {
 sub add_remote {
     my ($self, $host) = @_;
 
+    eval {
+        $self->find_remote($host);
+    };
+
+    die "remote '$host' already added"
+        if !$@;
+
     my $remote = Vmprobe::Remote->new(
         host => $host,
         on_state_change => sub {
