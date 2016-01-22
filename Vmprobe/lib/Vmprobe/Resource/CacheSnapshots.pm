@@ -21,9 +21,7 @@ sub get_initial_params {
 sub on_ready {
     my ($self) = @_;
 
-    $self->list_snapshot_dir();
-
-    $self->{scan_timer} = AE::timer 2, 2, sub {
+    $self->{scan_timer} = AE::timer 0.1, 2, sub {
         $self->list_snapshot_dir();
     };
 }
