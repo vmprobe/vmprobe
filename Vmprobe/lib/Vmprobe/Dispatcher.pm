@@ -212,7 +212,7 @@ sub process_msg {
             $resource->$cmd($msg->{args});
         } frame_catch {
             say STDERR "error: $@";
-            $resource->add_error($@);
+            $resource->add_error(abbreviate_perl_exception($@));
         }
     } else {
         warn "unknown message";

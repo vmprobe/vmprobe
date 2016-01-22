@@ -3,7 +3,7 @@ package Vmprobe::Util;
 use common::sense;
 
 use Exporter 'import';
-our @EXPORT = qw(pages2size colour get_session_token);
+our @EXPORT = qw(pages2size colour get_session_token abbreviate_perl_exception);
 
 
 
@@ -128,6 +128,15 @@ sub get_session_token {
     return $generator->get;
 }
 
+
+
+sub abbreviate_perl_exception {
+    my ($err) = @_;
+
+    $err =~ s/at \S+ line \d+\.\s*\z//;
+
+    return $err;
+}
 
 
 

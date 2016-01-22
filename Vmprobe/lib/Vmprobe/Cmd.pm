@@ -141,7 +141,7 @@ sub run_cmd_aux {
         my $err = $@;
 
         if ($err) {
-            $err =~ s/at \S+ line \d+\.\s*\z//;
+            $err = abbreviate_perl_exception($err);
 
             show_help("validation failure: $err", $full_cmd, $dir);
             exit 1;
