@@ -8,8 +8,7 @@ import * as util from '../util';
 import Hostname from '../Hostname';
 
 
-// Active(file) + Inactive(file) + Shmem = Cached + Buffer
-// https://www.reddit.com/r/linux/comments/1hk5ow/free_buffer_swap_dirty_procmeminfo_explained/
+// AnonPages + SwapCached + Buffers + Cached + Slab + PageTables + MemFree
 
 
 export class MemInfo extends PureComponent {
@@ -25,10 +24,18 @@ export class MemInfo extends PureComponent {
 
     let totalMemInfo = {
       MemTotal: 0,
-      MemFree: 0,
+      AnonPages: 0,
+      SwapCached: 0,
       Buffers: 0,
       Cached: 0,
       Slab: 0,
+      PageTables: 0,
+      MemFree: 0,
+
+      'Active(anon)': 0,
+      'Inactive(anon)': 0,
+      'Active(file)': 0,
+      'Inactive(file)': 0,
     };
 
     let numRemotes = 0;
@@ -37,10 +44,18 @@ export class MemInfo extends PureComponent {
       if (remote.mem_info) {
         numRemotes++;
         totalMemInfo.MemTotal += remote.mem_info.MemTotal;
-        totalMemInfo.MemFree += remote.mem_info.MemFree;
+        totalMemInfo.AnonPages += remote.mem_info.AnonPages;
+        totalMemInfo.SwapCached += remote.mem_info.SwapCached;
         totalMemInfo.Buffers += remote.mem_info.Buffers;
         totalMemInfo.Cached += remote.mem_info.Cached;
         totalMemInfo.Slab += remote.mem_info.Slab;
+        totalMemInfo.PageTables += remote.mem_info.PageTables;
+        totalMemInfo.MemFree += remote.mem_info.MemFree;
+
+        totalMemInfo['Active(anon)'] += remote.mem_info['Active(anon)'];
+        totalMemInfo['Inactive(anon)'] += remote.mem_info['Inactive(anon)'];
+        totalMemInfo['Active(file)'] += remote.mem_info['Active(file)'];
+        totalMemInfo['Inactive(file)'] += remote.mem_info['Inactive(file)'];
       }
     }
 
@@ -51,7 +66,7 @@ export class MemInfo extends PureComponent {
     return (
       <div>
         Total:
-        <MemoryUsageBar height={50} width={this.props.windowWidth} mem_info={totalMemInfo} {...this.props} />
+        <MemoryUsageBar height={60} width={this.props.windowWidth} mem_info={totalMemInfo} {...this.props} />
 
         <Table
           rowsCount={this.props.remotes.length}
@@ -76,7 +91,7 @@ export class MemInfo extends PureComponent {
               <Cell {...props}>
                 {
                   this.props.remotes[rowIndex].mem_info
-                  ? <MemoryUsageBar height={30} width={this.props.windowWidth / 2} mem_info={this.props.remotes[rowIndex].mem_info} {...this.props} />
+                  ? <MemoryUsageBar height={37} width={this.props.windowWidth / 2} mem_info={this.props.remotes[rowIndex].mem_info} {...this.props} />
                   : this.props.remotes[rowIndex]['remote_state'] === 'fail'
                   ? <span style={{ color: 'red' }} className="glyphicon glyphicon-fire" ariaHidden="true" />
                   : <span className="glyphicon glyphicon-refresh" ariaHidden="true" />
@@ -102,23 +117,25 @@ class MemoryUsageBar extends PureComponent {
 
     if (!mem) return <div/>;
 
-    let used_pages = mem['MemTotal'] - mem['MemFree'] - mem['Buffers'] - mem['Cached'] - mem['Slab'];
+    let other_main = mem['MemTotal'] - mem['AnonPages'] - mem['SwapCached'] - mem['Buffers'] - mem['Cached'] - mem['Slab'] - mem['PageTables'] - mem['MemFree'];
+    let other_active = mem['MemTotal'] - mem['Active(anon)'] - mem['Inactive(anon)'] - mem['Active(file)'] - mem['Inactive(file)']- mem['MemFree'];
 
     return (
-      <div>
+      <div style={{ height: this.props.height, lineHeight: 0 }}>
+       <div style={{ height: this.props.height*0.5 }}>
         <MemoryUsageBarSegment
           title="Used"
-          desc="Anonymous memory used by applications."
+          desc="Anonymous memory (not backed by files) that are in use by applications."
           color={'#21C547'}
-          pages={used_pages}
+          pages={mem['AnonPages']}
           totalPages={mem['MemTotal']}
           {...this.props}
         />
         <MemoryUsageBarSegment
-          title="Slab"
-          desc="In-kernel data structures which include the dentry and inode caches."
-          color={'yellow'}
-          pages={mem['Slab']}
+          title="Swap cache"
+          desc="Memory that once was swapped out, is swapped back in but still also is in the swapfile (if memory is needed it doesn't need to be swapped out AGAIN because it is already in the swapfile. This saves I/O)"
+          color={'#24C547'}
+          pages={mem['SwapCached']}
           totalPages={mem['MemTotal']}
           {...this.props}
         />
@@ -139,6 +156,30 @@ class MemoryUsageBar extends PureComponent {
           {...this.props}
         />
         <MemoryUsageBarSegment
+          title="Slab"
+          desc="In-kernel data structures which include the dentry and inode caches."
+          color={'yellow'}
+          pages={mem['Slab']}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+        <MemoryUsageBarSegment
+          title="Page Tables"
+          desc="Memory dedicated to the lowest level of page tables: This memory is used to manage virtual memory itself."
+          color={'#00AAFF'}
+          pages={mem['PageTables']}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+        <MemoryUsageBarSegment
+          title="Unaccounted for"
+          desc="Memory not accounted for in memstat. It is probably non-slab memory used by the kernel, for example vmalloc."
+          color={'grey'}
+          pages={other_main}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+        <MemoryUsageBarSegment
           title="Free"
           desc="Free memory that is available for use by programs, the page-cache, or the kernel."
           color={'black'}
@@ -146,6 +187,57 @@ class MemoryUsageBar extends PureComponent {
           totalPages={mem['MemTotal']}
           {...this.props}
         />
+       </div>
+       <div style={{ height: this.props.height*0.5 }}>
+        <MemoryUsageBarSegment
+          title="Active Anonymous"
+          desc="Anonymous (not file-backed) memory that is currently on the active LRU list: Memory of programs that has been accessed recently (hot)."
+          color={'#ED1A25'}
+          pages={mem['Active(anon)']}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+        <MemoryUsageBarSegment
+          title="Inactive Anonymous"
+          desc="Anonymous (not file-backed) memory that is currently on the inactive LRU list: Program memory that hasn't been accessed recently and is a candidate for swapping (cold)."
+          color={'#FF6363'}
+          pages={mem['Inactive(anon)']}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+        <MemoryUsageBarSegment
+          title="Active File"
+          desc="File-system backed memory that is currently on the active LRU list: This memory has been accessed recently (hot)."
+          color={'#800D78'}
+          pages={mem['Active(file)']}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+        <MemoryUsageBarSegment
+          title="Inactive File"
+          desc="File-system backed memory that is currently on the inactive LRU list: This memory hasn't been accessed recently and is a candidate for paging out (cold)."
+          color={'#ED74E5'}
+          pages={mem['Inactive(file)']}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+        <MemoryUsageBarSegment
+          title="Not on LRU lists"
+          desc="This memory is not on any of the LRU lists. It is probably memory used by the kernel or is locked into RAM."
+          color={'#494949'}
+          pages={other_active}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+        <MemoryUsageBarSegment
+          title="Free"
+          desc="Free memory that is available for use by programs, the page-cache, or the kernel."
+          color={'black'}
+          pages={mem['MemFree']}
+          totalPages={mem['MemTotal']}
+          {...this.props}
+        />
+       </div>
       </div>
     );
   }
@@ -160,7 +252,7 @@ class MemoryUsageBarSegment extends PureComponent {
       <span
         style={{
                  width: this.props.width * this.props.pages / this.props.totalPages,
-                 height: this.props.height,
+                 height: '100%',
                  backgroundColor: this.props.color,
                  display: 'inline-block',
               }}
