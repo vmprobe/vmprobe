@@ -4,7 +4,7 @@ Many platforms have pre-built packages for vmprobe and this is the
 recommended way to use it if you don't plan to modify vmprobe itself:
 
 Soon we will have pre-built packages for popular platforms available on
-our [install page](http://vmprobe.com/install), but for now should
+our [install page](https://vmprobe.com/install), but for now should
 either install from source (read on) or from CPAN, for example with [cpanminus](https://metacpan.org/pod/App::cpanminus):
 
     cpanm Vmprobe --sudo
@@ -90,7 +90,7 @@ don't need to re-build the perl module after recompiling the C++ code.
 ### Developing web (javascript+react)
 
 In the `web` directory there is a `dev-server.js` file that is able to
-run the [react hot-loader](http://gaearon.github.io/react-hot-loader/).
+run the [react hot-loader](https://gaearon.github.io/react-hot-loader/).
 However, you don't need to run this manually. When you run vmprobe's
 `web` command:
 

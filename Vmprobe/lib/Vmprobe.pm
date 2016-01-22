@@ -21,7 +21,7 @@ Vmprobe - The control panel for your cloud's memory
 
 =head1 DESCRIPTION
 
-vmprobe is a utility for developers and system administrators for analyzing and optimizing the filesystem cache of a cluster or cloud. You can learn more about it at our website: L<vmprobe.com|http://vmprobe.com>.
+vmprobe is a utility for developers and system administrators for analyzing and optimizing the filesystem cache of a cluster or cloud. You can learn more about it at our website: L<vmprobe.com|https://vmprobe.com>.
 
 This software is very much in beta. There are some known bugs and a lot of features we still plan on adding.
 
@@ -32,7 +32,7 @@ This module installs the C<vmprobe> binary in your path and most interaction is 
 
 =head1 SEE ALSO
 
-L<Official vmprobe website|http://vmprobe.com>
+L<Official vmprobe website|https://vmprobe.com>
 
 L<The vmprobe github repo|https://github.com/vmprobe/vmprobe>
 

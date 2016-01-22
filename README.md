@@ -1,15 +1,15 @@
-[![vmprobe logo](https://vmprobe.github.io/vmprobe/logo.svg)](http://vmprobe.com)
+[![vmprobe logo](https://vmprobe.github.io/vmprobe/logo.svg)](https://vmprobe.com)
 
 # vmprobe
 
-[official website](http://vmprobe.com)
+[official website](https://vmprobe.com)
 
 ## Introduction
 
-vmprobe is a utility for managing the virtual memory of your cloud, cluster, or servers. It is based on [vmtouch](http://hoytech.com/vmtouch/) technology but it adds many new features, and two new interfaces:
+vmprobe is a utility for managing the virtual memory of your cloud, cluster, or servers. It is based on [vmtouch](https://hoytech.com/vmtouch/) technology but it adds many new features, and two new interfaces:
 
-* A powerful [command-line client](http://vmprobe.com/command-line)
-* An intuitive [web GUI](http://vmprobe.com/web-gui-tutorial)
+* A powerful [command-line client](https://vmprobe.com/command-line)
+* An intuitive [web GUI](https://vmprobe.com/web-gui-tutorial)
 
 In our opinion, the main feature that sets vmprobe apart from other sysadmin tools is that vmprobe is designed from the start to operate on distributed collections of machines that are typical in modern architectures. As much as possible, vmprobe removes the distinction between local and remote administration.
 
@@ -18,7 +18,7 @@ In our opinion, the main feature that sets vmprobe apart from other sysadmin too
 
 ## Installing
 
-The [vmprobe installation guide](http://vmprobe.com/install) should have platform-specific instructions as well as links to the latest builds, but for now you must either install from source (see the contributing section below), or from CPAN.
+The [vmprobe installation guide](https://vmprobe.com/install) should have platform-specific instructions as well as links to the latest builds, but for now you must either install from source (see the contributing section below), or from CPAN.
 
 If you have [cpanminus](https://metacpan.org/pod/App::cpanminus) installed, this should be as easy as:
 
@@ -33,7 +33,7 @@ If you would like to contribute to vmprobe, first of all: thank you!
 
 Please [create a github issue](https://github.com/vmprobe/vmprobe/issues/new) with any bug report, feature request, or even general question relating to vmprobe.
 
-To develop on vmprobe itself, please see [our contributing guide](http://vmprobe.com/contributing) which should have all the steps needed to get started (if you run into any trouble, please file a github issue).
+To develop on vmprobe itself, please see [our contributing guide](https://vmprobe.com/contributing) which should have all the steps needed to get started (if you run into any trouble, please file a github issue).
 
 
 ## License
