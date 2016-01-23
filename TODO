@@ -22,11 +22,11 @@ cmd line:
 
 
 memory info:
-  * show active versus non-active memory
+  * hovering over a host should show in the total what portion in use by that host
 
 
 fs cache:
-  * implement locking
+  * if mlock fails due to rlimit, show the max you can lock and how much you have already locked
 
 
 
