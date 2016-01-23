@@ -91,7 +91,7 @@ export class MemInfo extends PureComponent {
               <Cell {...props}>
                 {
                   this.props.remotes[rowIndex].mem_info
-                  ? <MemoryUsageBar height={37} width={this.props.windowWidth / 2} mem_info={this.props.remotes[rowIndex].mem_info} {...this.props} />
+                  ? <MemoryUsageBar height={37} width={this.props.windowWidth / 1.5} mem_info={this.props.remotes[rowIndex].mem_info} {...this.props} />
                   : this.props.remotes[rowIndex]['remote_state'] === 'fail'
                   ? <span style={{ color: 'red' }} className="glyphicon glyphicon-fire" ariaHidden="true" />
                   : <span className="glyphicon glyphicon-refresh" ariaHidden="true" />
@@ -166,7 +166,7 @@ class MemoryUsageBar extends PureComponent {
         <MemoryUsageBarSegment
           title="Page Tables"
           desc="Memory dedicated to the lowest level of page tables: This memory is used to manage virtual memory itself."
-          color={'#00AAFF'}
+          color={'#DE8C2B'}
           pages={mem['PageTables']}
           totalPages={mem['MemTotal']}
           {...this.props}
