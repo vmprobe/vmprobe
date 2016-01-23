@@ -85,9 +85,8 @@ export class MemInfo extends PureComponent {
         <MemoryUsageBar height={60} width={this.props.windowWidth - 4} mem_info={totalMemInfo} showLRU={this.state.showLRU} showKernel={this.state.showKernel} {...this.props} />
 
         <div>
+          <span style={{ cursor: 'pointer', marginRight: 20 }} onClick={() => this.setState({ showKernel: !this.state.showKernel })}>Kernel/system <span className={this.state.showKernel ? "glyphicon glyphicon-check" : "glyphicon glyphicon-unchecked"} ariaHidden="true" /></span>
           <span style={{ cursor: 'pointer' }} onClick={() => this.setState({ showLRU: !this.state.showLRU })}>LRU lists <span className={this.state.showLRU ? "glyphicon glyphicon-check" : "glyphicon glyphicon-unchecked"} ariaHidden="true" /></span>
-
-          <span style={{ cursor: 'pointer', marginLeft: 20 }} onClick={() => this.setState({ showKernel: !this.state.showKernel })}>Kernel/system <span className={this.state.showKernel ? "glyphicon glyphicon-check" : "glyphicon glyphicon-unchecked"} ariaHidden="true" /></span>
         </div>
 
         <Table
@@ -173,16 +172,8 @@ class MemoryUsageBar extends PureComponent {
         <MemoryUsageBarSegment
           title="Swap cache"
           desc="Memory that once was swapped out, is swapped back in but still also is in the swapfile (if memory is needed it doesn't need to be swapped out AGAIN because it is already in the swapfile. This saves I/O)"
-          color={'#24C547'}
+          color={'#3EF250'}
           pages={mem['SwapCached']}
-          totalPages={mem_total}
-          {...this.props}
-        />
-        <MemoryUsageBarSegment
-          title="Buffers"
-          desc="Miscellaneous in-kernel caches, such as ext file-system meta-data."
-          color={'blue'}
-          pages={mem['Buffers']}
           totalPages={mem_total}
           {...this.props}
         />
@@ -194,6 +185,16 @@ class MemoryUsageBar extends PureComponent {
           totalPages={mem_total}
           {...this.props}
         />
+        { this.props.showKernel &&
+          <MemoryUsageBarSegment
+            title="Buffers"
+            desc="Miscellaneous in-kernel caches, such as ext file-system meta-data."
+            color={'blue'}
+            pages={mem['Buffers']}
+            totalPages={mem_total}
+            {...this.props}
+          />
+        }
         { this.props.showKernel &&
           <MemoryUsageBarSegment
             title="Page Tables"
@@ -227,7 +228,7 @@ class MemoryUsageBar extends PureComponent {
         { this.props.showKernel &&
           <MemoryUsageBarSegment
             title="Kernel Stack"
-            desc="Kernel stacks."
+            desc="The memory consumed by the program stacks of the various kernel threads."
             color={'#E73BA7'}
             pages={mem['KernelStack']}
             totalPages={mem_total}
@@ -237,9 +238,9 @@ class MemoryUsageBar extends PureComponent {
         { !this.props.showKernel &&
           <MemoryUsageBarSegment
             title="Kernel/System memory"
-            desc="Page tables, kernel slab data-structure, and kernel stacks."
+            desc="Buffers, page tables, the kernel slab data-structure, and kernel stacks."
             color={'#AB3BE7'}
-            pages={mem['PageTables'] + mem['SReclaimable'] + mem['SUnreclaim'] + mem['KernelStack']}
+            pages={mem['Buffers'] + mem['PageTables'] + mem['SReclaimable'] + mem['SUnreclaim'] + mem['KernelStack']}
             totalPages={mem_total}
             {...this.props}
           />
