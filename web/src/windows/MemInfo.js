@@ -17,6 +17,15 @@ export class MemInfo extends PureComponent {
   };
 
 
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      showLRU: false,
+    };
+  }
+
+
   render() {
     if (!this.props.remotes || this.props.remotes.length == 0) {
       return <div>No remotes connected</div>;
@@ -65,8 +74,11 @@ export class MemInfo extends PureComponent {
 
     return (
       <div>
-        Total:
-        <MemoryUsageBar height={60} width={this.props.windowWidth} mem_info={totalMemInfo} {...this.props} />
+        <MemoryUsageBar height={60} width={this.props.windowWidth} mem_info={totalMemInfo} showLRU={this.state.showLRU} {...this.props} />
+
+        <div>
+          <span style={{ cursor: 'pointer' }} onClick={() => this.setState({ showLRU: !this.state.showLRU })}>Show LRU lists <span className={this.state.showLRU ? "glyphicon glyphicon-check" : "glyphicon glyphicon-unchecked"} ariaHidden="true" /></span>
+        </div>
 
         <Table
           rowsCount={this.props.remotes.length}
@@ -91,7 +103,7 @@ export class MemInfo extends PureComponent {
               <Cell {...props}>
                 {
                   this.props.remotes[rowIndex].mem_info
-                  ? <MemoryUsageBar height={37} width={this.props.windowWidth / 1.5} mem_info={this.props.remotes[rowIndex].mem_info} {...this.props} />
+                  ? <MemoryUsageBar height={37} width={this.props.windowWidth / 1.5} mem_info={this.props.remotes[rowIndex].mem_info} showLRU={this.state.showLRU} {...this.props} />
                   : this.props.remotes[rowIndex]['remote_state'] === 'fail'
                   ? <span style={{ color: 'red' }} className="glyphicon glyphicon-fire" ariaHidden="true" />
                   : <span className="glyphicon glyphicon-refresh" ariaHidden="true" />
@@ -122,7 +134,7 @@ class MemoryUsageBar extends PureComponent {
 
     return (
       <div style={{ height: this.props.height, lineHeight: 0 }}>
-       <div style={{ height: this.props.height*0.5 }}>
+       <div style={{ height: this.props.height * (this.props.showLRU ? 0.5 : 1)}}>
         <MemoryUsageBarSegment
           title="Used"
           desc="Anonymous memory (not backed by files) that are in use by applications."
@@ -188,6 +200,7 @@ class MemoryUsageBar extends PureComponent {
           {...this.props}
         />
        </div>
+       {this.props.showLRU ?
        <div style={{ height: this.props.height*0.5 }}>
         <MemoryUsageBarSegment
           title="Active Anonymous"
@@ -238,6 +251,7 @@ class MemoryUsageBar extends PureComponent {
           {...this.props}
         />
        </div>
+       : null}
       </div>
     );
   }
