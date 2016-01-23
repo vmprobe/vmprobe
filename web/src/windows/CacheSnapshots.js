@@ -14,11 +14,10 @@ import CacheSummaryDisplay from '../CacheSummaryDisplay';
 
 export class CacheSnapshots extends PureComponent {
   static defaultProps = {
-    windowTitle: "Cache Snapshots",
-    defaultWidth: 800,
+    windowTitle: (self) => "Cache Snapshots" + (self.props.params.snapshot_dir ? `: ${self.props.params.snapshot_dir}` : ''),
+    defaultWidth: 1000,
     defaultHeight: 400,
   };
-
 
   render() {
     if (!this.props.snapshots) {

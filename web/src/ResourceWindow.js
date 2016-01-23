@@ -108,7 +108,7 @@ export class ResourceWindow extends PureComponent {
         <div className="resourceWindow" style={{zIndex: this.state.zIndex, width: this.state.width}}>
 
           <div onClick={this.foreground.bind(this)} onDoubleClick={this.toggleMinimised.bind(this)} className="resourceWindowHeader handle">
-            <div className="title handle">{child.props.windowTitle}</div>
+            <div className="title handle">{typeof(child.props.windowTitle) === 'function' ? child.props.windowTitle(child) : child.props.windowTitle}</div>
             {job_display}
             <div className="controls">
               {error_indicator}
