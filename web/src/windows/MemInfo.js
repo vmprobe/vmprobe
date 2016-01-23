@@ -14,6 +14,7 @@ import Hostname from '../Hostname';
 export class MemInfo extends PureComponent {
   static defaultProps = {
     windowTitle: "Memory Info",
+    defaultWidth: 800,
   };
 
 
@@ -74,7 +75,7 @@ export class MemInfo extends PureComponent {
 
     return (
       <div>
-        <MemoryUsageBar height={60} width={this.props.windowWidth} mem_info={totalMemInfo} showLRU={this.state.showLRU} {...this.props} />
+        <MemoryUsageBar height={60} width={this.props.windowWidth - 2} mem_info={totalMemInfo} showLRU={this.state.showLRU} {...this.props} />
 
         <div>
           <span style={{ cursor: 'pointer' }} onClick={() => this.setState({ showLRU: !this.state.showLRU })}>Show LRU lists <span className={this.state.showLRU ? "glyphicon glyphicon-check" : "glyphicon glyphicon-unchecked"} ariaHidden="true" /></span>
@@ -98,12 +99,22 @@ export class MemInfo extends PureComponent {
             flexGrow={1}
           />
           <Column
+            header={<Cell>Memory</Cell>}
+            cell={({rowIndex, ...props}) => (
+              <Cell {...props}>
+                <span>{this.props.remotes[rowIndex].mem_info && util.prettyPrintPages(this.props.remotes[rowIndex].mem_info['MemTotal'])}</span>
+              </Cell>
+            )}
+            width={0}
+            flexGrow={1}
+          />
+          <Column
             header={<Cell>Memory Info</Cell>}
             cell={({rowIndex, ...props}) => (
               <Cell {...props}>
                 {
                   this.props.remotes[rowIndex].mem_info
-                  ? <MemoryUsageBar height={37} width={this.props.windowWidth / 1.5} mem_info={this.props.remotes[rowIndex].mem_info} showLRU={this.state.showLRU} {...this.props} />
+                  ? <MemoryUsageBar height={37} width={this.props.windowWidth / 1.7} mem_info={this.props.remotes[rowIndex].mem_info} showLRU={this.state.showLRU} {...this.props} />
                   : this.props.remotes[rowIndex]['remote_state'] === 'fail'
                   ? <span style={{ color: 'red' }} className="glyphicon glyphicon-fire" ariaHidden="true" />
                   : <span className="glyphicon glyphicon-refresh" ariaHidden="true" />
@@ -111,7 +122,7 @@ export class MemInfo extends PureComponent {
               </Cell>
             )}
             width={0}
-            flexGrow={3}
+            flexGrow={4}
           />
         </Table>
       </div>
