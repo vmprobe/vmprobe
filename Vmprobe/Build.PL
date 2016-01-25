@@ -46,6 +46,7 @@ my %module_build_args = (
     'Guard' => 0,
   },
   test_requires => {
+    'Clone' => 0,
   },
 
   extra_compiler_flags => ['-x', 'c++', '-std=c++11', '-Ilibvmprobe'],
