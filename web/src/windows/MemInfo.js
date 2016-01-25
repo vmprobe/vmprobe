@@ -85,7 +85,7 @@ export class MemInfo extends PureComponent {
         <MemoryUsageBar height={60} width={this.props.windowWidth - 4} mem_info={totalMemInfo} showLRU={this.state.showLRU} showKernel={this.state.showKernel} {...this.props} />
 
         <div>
-          <span style={{ cursor: 'pointer', marginRight: 20 }} onClick={() => this.setState({ showKernel: !this.state.showKernel })}>Kernel/system <span className={this.state.showKernel ? "glyphicon glyphicon-check" : "glyphicon glyphicon-unchecked"} ariaHidden="true" /></span>
+          <span style={{ cursor: 'pointer', marginRight: 20 }} onClick={() => this.setState({ showKernel: !this.state.showKernel })}>System details <span className={this.state.showKernel ? "glyphicon glyphicon-check" : "glyphicon glyphicon-unchecked"} ariaHidden="true" /></span>
           <span style={{ cursor: 'pointer' }} onClick={() => this.setState({ showLRU: !this.state.showLRU })}>LRU lists <span className={this.state.showLRU ? "glyphicon glyphicon-check" : "glyphicon glyphicon-unchecked"} ariaHidden="true" /></span>
         </div>
 
@@ -237,8 +237,8 @@ class MemoryUsageBar extends PureComponent {
         }
         { !this.props.showKernel &&
           <MemoryUsageBarSegment
-            title="Kernel/System memory"
-            desc="Buffers, page tables, the kernel slab data-structure, and kernel stacks."
+            title="System/kernel memory"
+            desc="Buffers, page tables, slab data-structures, and kernel stacks."
             color={'#AB3BE7'}
             pages={mem['Buffers'] + mem['PageTables'] + mem['SReclaimable'] + mem['SUnreclaim'] + mem['KernelStack']}
             totalPages={mem_total}
