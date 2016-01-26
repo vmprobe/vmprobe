@@ -94,7 +94,7 @@ sub run_cmd_aux {
         push @getopt_specs, $opt_name;
     }
 
-    push @getopt_specs, 'help|s';
+    push @getopt_specs, 'help|?';
 
     push @getopt_specs, '<>';
     $o->{'<>'} = sub {
@@ -131,6 +131,8 @@ sub run_cmd_aux {
     }
 
 
+    $opt->{$cmd_short} = $o;
+
     if (defined &{ "${cmd_long}::validate" }) {
         my $validate = \&{ "${cmd_long}::validate" };
 
@@ -148,8 +150,6 @@ sub run_cmd_aux {
         }
     }
 
-
-    $opt->{$cmd_short} = $o;
 
     if (defined $next_cmd) {
         if (exists $yaml_spec->{argv}) {
