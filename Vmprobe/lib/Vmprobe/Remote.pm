@@ -96,7 +96,13 @@ sub _populate_handle {
 
     return if @{ $self->{pending_handle_cbs} } > 1;
 
-    my $cmd = [ ($global_params->{vmprobe_binary} // 'vmprobe'), 'raw', ];
+    my $vmprobe_binary;
+
+    $vmprobe_binary //= $global_params->{vmprobe_binary};
+    $vmprobe_binary //= $0 if $self->{host} eq 'localhost';
+    $vmprobe_binary //= 'vmprobe';
+
+    my $cmd = [ $vmprobe_binary, 'raw', ];
 
     unshift @$cmd, qw(sudo -p -n --)
         if $global_params->{sudo};

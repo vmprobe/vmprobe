@@ -26,7 +26,6 @@ opt:
         doc: If specified, the vmprobe instances on the remote hosts will be run with sudo.
     vmprobe-binary:
         type: Str
-        default: vmprobe
         doc: The binary to run on remotes. This may be useful if vmprobe isn't in your path.
 };
 
@@ -49,7 +48,7 @@ sub validate {
         $Vmprobe::Remote::global_params->{sudo} = 1;
     }
 
-    if (opt->{'vmprobe-binary'}) {
+    if (defined opt->{'vmprobe-binary'}) {
         require Vmprobe::Remote;
 
         $Vmprobe::Remote::global_params->{vmprobe_binary} = opt->{'vmprobe-binary'};
