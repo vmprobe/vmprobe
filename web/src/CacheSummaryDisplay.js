@@ -17,6 +17,15 @@ export default class CacheSummaryDisplay extends PureComponent {
   render() {
     if (!this.props.summary) return <span className="glyphicon glyphicon-refresh" ariaHidden="true" />;
 
+    if (this.props.summary.length == 1 && this.props.summary[0].num_files == 0) {
+      return (
+        <Tooltip
+          tip={<span>No files at this path.</span>}
+          parent={<span>&mdash;</span>}
+        />
+      );
+    }
+
     let item_width = this.props.width / this.props.summary.length;
 
     let blocks = [];

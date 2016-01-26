@@ -5,6 +5,7 @@ import SnapshotDraggable from '../SnapshotDraggable';
 import Time from 'react-time';
 
 import Tooltip from '../Tooltip';
+import TooltipSame from '../TooltipSame';
 import {Table, Column, Cell} from 'fixed-data-table';
 
 import * as util from '../util';
@@ -49,18 +50,27 @@ export class CacheSnapshots extends PureComponent {
               </Cell>
             )}
             width={0}
-            flexGrow={1}
+            flexGrow={2}
           />
           <Column
-            header={<Cell>Source</Cell>}
+            header={<Cell>Host</Cell>}
             cell={({rowIndex, ...props}) => (
               <Cell {...props}>
-                <div>{files[rowIndex]['host']}</div>
-                <div>{files[rowIndex]['path']}</div>
+                <TooltipSame item={files[rowIndex]['host']} />
               </Cell>
             )}
             width={0}
-            flexGrow={1}
+            flexGrow={2}
+          />
+          <Column
+            header={<Cell>Path</Cell>}
+            cell={({rowIndex, ...props}) => (
+              <Cell {...props}>
+                <TooltipSame item={files[rowIndex]['path']} />
+              </Cell>
+            )}
+            width={0}
+            flexGrow={2}
           />
           <Column
             header={<Cell>Time</Cell>}
@@ -78,12 +88,12 @@ export class CacheSnapshots extends PureComponent {
               <Cell {...props}>
                 <CacheSummaryDisplay
                   summary={files[rowIndex]['summary']}
-                  width={(this.props.windowWidth / 4) - 30}
+                  width={(this.props.windowWidth / 3) - 62}
                 />
               </Cell>
             )}
             width={0}
-            flexGrow={1}
+            flexGrow={3}
           />
         </Table>
       </div>
