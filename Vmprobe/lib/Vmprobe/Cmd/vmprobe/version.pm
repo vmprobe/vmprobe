@@ -18,7 +18,6 @@ doc: Gets the vmprobe version and basic platform information.
 
 sub run {
     Vmprobe::Poller::poll({
-        remotes => opt('vmprobe')->{remote},
         probe_name => 'version',
         args => {},
         cb => sub {

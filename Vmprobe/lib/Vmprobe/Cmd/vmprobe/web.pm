@@ -83,7 +83,8 @@ sub run {
 
     say "Listening on http://", opt->{host}, ":", opt->{port};
 
-    foreach my $host (@{ opt('vmprobe')->{remote} }) {
+    require Vmprobe::Cmd::vmprobe;
+    foreach my $host (@{ Vmprobe::Cmd::vmprobe::get_remotes() }) {
         say "Adding remote: $host";
         $dispatcher->add_remote($host);
     }

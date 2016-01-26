@@ -20,7 +20,6 @@ sub run {
     my $time0 = Time::HiRes::time();
 
     Vmprobe::Poller::poll({
-        remotes => opt('vmprobe')->{remote},
         probe_name => 'timestamp',
         args => {},
         cb => sub {

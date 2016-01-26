@@ -23,7 +23,7 @@ argv: Snapshot filenames.
 
 
 sub run {
-    my $remotes = opt('vmprobe')->{remote};
+    my $remotes = Vmprobe::Cmd::vmprobe::get_remotes();
     my $argv = argv();
 
     my ($snapshot_a, $snapshot_b);

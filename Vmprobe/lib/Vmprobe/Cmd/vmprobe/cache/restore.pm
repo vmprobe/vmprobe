@@ -34,7 +34,6 @@ sub run {
     ## Apply snapshot
 
     Vmprobe::Poller::poll({
-        remotes => opt('vmprobe')->{remote},
         probe_name => 'cache::restore',
         args => {
              snapshot => $snapshot->{snapshot},

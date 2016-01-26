@@ -20,6 +20,9 @@ opt:
         type: Str[]
         doc: Filenames of private keys to be used for the ssh connection. This is passed through to ssh's -i switch.
 
+    remotes-file:
+        type: Str
+        doc: A file that contains newline-separated hosts to use as remotes. This flag takes precedence over --remote.
 };
 
 
@@ -35,6 +38,29 @@ sub validate {
         $Vmprobe::Remote::global_params->{ssh_private_key} = $keys->[0];
     }
 }
+
+
+
+sub get_remotes {
+    my $remote_file = opt->{'remotes-file'};
+
+    if ($remote_file) {
+        my @remotes;
+
+        open(my $fh, '<', $remote_file) || die "could open remotes file '$remote_file': $!";
+
+        foreach my $line (<$fh>) {
+            chomp $line;
+            next if $line =~ /^$/ || $line =~ /^\s*#/;
+            push @remotes, $line;
+        }
+
+        return \@remotes;
+    }
+
+    return opt->{remote};
+}
+
 
 
 1;

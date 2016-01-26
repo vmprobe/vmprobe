@@ -38,7 +38,6 @@ sub run {
     my $data = {};
 
     Vmprobe::Poller::poll({
-        remotes => opt('vmprobe')->{remote},
         probe_name => 'cache::summary',
         args => {
             path => $path,

@@ -21,7 +21,6 @@ sub validate {
 
 sub run {
     Vmprobe::Poller::poll({
-        remotes => opt('vmprobe')->{remote},
         probe_name => 'cache::evict',
         args => {
             path => opt('vmprobe::cache')->{path},

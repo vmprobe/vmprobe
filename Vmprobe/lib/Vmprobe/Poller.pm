@@ -38,8 +38,11 @@ sub poll {
         $remotes_param = $params->{remote};
     }
 
-    $remotes_param = [] if !defined $remotes_param;
-    $remotes_param = [ $remotes_param ] if ref $remotes_param ne 'ARRAY';
+    if (!defined $remotes_param) {
+        $remotes_param = Vmprobe::Cmd::vmprobe::get_remotes();
+    } elsif (ref $remotes_param ne 'ARRAY') {
+        $remotes_param = [ $remotes_param ];
+    }
 
     my @remotes;
 

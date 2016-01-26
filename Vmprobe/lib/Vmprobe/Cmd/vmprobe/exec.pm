@@ -40,7 +40,6 @@ sub run {
     }
 
     Vmprobe::Poller::poll({
-        remotes => opt('vmprobe')->{remote},
         probe_name => 'exec',
         args => { cmd => $cmd },
         cb => sub {
