@@ -163,7 +163,7 @@ class MemoryUsageBar extends PureComponent {
        <div style={{ height: this.props.height * (this.props.showLRU ? 0.5 : 1)}}>
         <MemoryUsageBarSegment
           title="Used"
-          desc="Anonymous memory (not backed by files) that are in use by applications."
+          desc="Anonymous memory (not backed by files) that is in use by applications."
           color={'#21C547'}
           pages={mem['AnonPages']}
           totalPages={mem_total}
