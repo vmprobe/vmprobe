@@ -96,7 +96,7 @@ sub _populate_handle {
 
     return if @{ $self->{pending_handle_cbs} } > 1;
 
-    my $cmd = [ $0, 'raw', ];
+    my $cmd = [ 'vmprobe', 'raw', ];
 
     if ($self->{host} eq 'localhost') {
         $self->_start_cmd($cmd);
