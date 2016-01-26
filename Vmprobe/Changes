@@ -1,0 +1,13 @@
+0.1.4  2016-01-26
+  * Support cache snapshots in GUI
+  * Much enhanced memory usage display
+  * exec command
+  * --ssh-private-key option
+  * --remotes-file option
+  * Nicer error messages
+  * Don't hard-code g++ reference so as to support FreeBSD
+    (thanks Slaven Rezic)
+  * Docs
+
+0.1.3  2016-01-15
+  * First CPAN release!
