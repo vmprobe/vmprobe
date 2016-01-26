@@ -18,6 +18,9 @@ my $decoder = Sereal::Decoder->new;
 my $encoder = Sereal::Encoder->new;
 
 
+our $global_params = {};
+
+
 
 sub new {
     my ($class, %args) = @_;
@@ -26,6 +29,7 @@ sub new {
     bless $self, $class;
 
     $self->{host} = $args{host};
+
     $self->{state} = 'connecting';
     $self->{on_state_change} = $args{on_state_change} || sub {};
     $self->{on_error_message} = $args{on_error_message} || sub {};
@@ -106,7 +110,7 @@ sub _populate_handle {
         require Net::OpenSSH;
 
         my $master_pipe = Vmprobe::Util::capture_stderr {
-            $self->{ssh} = Net::OpenSSH->new($self->{host}, async => 1);
+            $self->{ssh} = Net::OpenSSH->new($self->{host}, key_path => $global_params->{ssh_private_key}, async => 1);
         };
 
         my $master_pipe_output = '';
