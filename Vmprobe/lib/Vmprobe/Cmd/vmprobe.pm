@@ -19,10 +19,15 @@ opt:
     ssh-private-key:
         type: Str[]
         doc: Filenames of private keys to be used for ssh connections. This is passed through to ssh's -i switch.
-
     remotes-file:
         type: Str
         doc: A file that contains newline-separated hosts to use as remotes. This flag takes precedence over --remote.
+    sudo:
+        doc: If specified, the vmprobe instances on the remote hosts will be run with sudo.
+    vmprobe-binary:
+        type: Str
+        default: vmprobe
+        doc: The binary to run on remotes. This may be useful if vmprobe isn't in your path.
 };
 
 
@@ -36,6 +41,18 @@ sub validate {
             if @$keys != 1;
 
         $Vmprobe::Remote::global_params->{ssh_private_key} = $keys->[0];
+    }
+
+    if (opt->{'sudo'}) {
+        require Vmprobe::Remote;
+
+        $Vmprobe::Remote::global_params->{sudo} = 1;
+    }
+
+    if (opt->{'vmprobe-binary'}) {
+        require Vmprobe::Remote;
+
+        $Vmprobe::Remote::global_params->{vmprobe_binary} = opt->{'vmprobe-binary'};
     }
 }
 

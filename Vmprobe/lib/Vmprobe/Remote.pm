@@ -96,7 +96,10 @@ sub _populate_handle {
 
     return if @{ $self->{pending_handle_cbs} } > 1;
 
-    my $cmd = [ 'vmprobe', 'raw', ];
+    my $cmd = [ ($global_params->{vmprobe_binary} // 'vmprobe'), 'raw', ];
+
+    unshift @$cmd, qw(sudo -p -n --)
+        if $global_params->{sudo};
 
     if ($self->{host} eq 'localhost') {
         $self->_start_cmd($cmd);
@@ -130,7 +133,7 @@ sub _populate_handle {
 
             if ($self->{ssh}->wait_for_master(1)) {
                 delete $self->{ssh_timer};
-                $self->_start_cmd([ $self->{ssh}->make_remote_command(@$cmd) ]);
+                $self->_start_cmd([ $self->{ssh}->make_remote_command({ tty => 1 }, @$cmd) ]);
                 $self->state_change('ok');
                 my $cbs = $self->{pending_handle_cbs};
                 delete $self->{pending_handle_cbs};
