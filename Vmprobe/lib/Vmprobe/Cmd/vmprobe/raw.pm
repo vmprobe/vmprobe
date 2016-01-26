@@ -10,7 +10,7 @@ use Sereal::Encoder;
 
 
 my $decoder = Sereal::Decoder->new;
-my $encoder = Sereal::Encoder->new;
+my $encoder = Sereal::Encoder->new({ compress => 1, });
 
 
 our $spec = q{
