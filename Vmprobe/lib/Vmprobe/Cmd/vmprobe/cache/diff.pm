@@ -10,8 +10,6 @@ use Vmprobe::Cache::Snapshot;
 use Sereal::Decoder;
 
 
-BEGIN { die "snapshot diffing is currently broken" }
-
 
 our $spec = q{
 
@@ -23,6 +21,8 @@ argv: Snapshot filenames.
 
 
 sub run {
+    die "snapshot diffing is currently broken";
+
     my $remotes = Vmprobe::Cmd::vmprobe::get_remotes();
     my $argv = argv();
 
