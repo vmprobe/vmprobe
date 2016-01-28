@@ -3,7 +3,7 @@ package Vmprobe::Util;
 use common::sense;
 
 use Exporter 'import';
-our @EXPORT = qw(pages2size colour get_session_token abbreviate_perl_exception);
+our @EXPORT = qw(pages2size colour get_session_token abbreviate_perl_exception sereal_encode sereal_decode);
 
 
 
@@ -138,6 +138,24 @@ sub abbreviate_perl_exception {
     return $err;
 }
 
+
+sub sereal_encode {
+    state $encoder = do {
+        require Sereal::Encoder;
+        Sereal::Encoder->new({ compress => 1, })
+    };
+
+    return $encoder->encode($_[0]);
+}
+
+sub sereal_decode {
+    state $decoder = do {
+        require Sereal::Decoder;
+        Sereal::Decoder->new()
+    };
+
+    return $decoder->decode($_[0]);
+}
 
 
 1;

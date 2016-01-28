@@ -4,8 +4,7 @@ use common::sense;
 
 use Vmprobe::Cmd;
 use Vmprobe::Poller;
-
-use Sereal::Encoder;
+use Vmprobe::Util;
 
 
 our $spec = q{
@@ -59,7 +58,7 @@ sub run {
         binmode $fh;
     }
 
-    print $fh Sereal::Encoder::encode_sereal($data, { compress => 1, });
+    print $fh sereal_encode($data);
 }
 
 

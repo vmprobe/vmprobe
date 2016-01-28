@@ -105,7 +105,7 @@ sub load_snapshot_data_from_file {
     my $snapshot;
 
     eval {
-        $snapshot = Sereal::Decoder::decode_sereal($encoded_snapshot);
+        $snapshot = sereal_decode($encoded_snapshot);
     };
 
     if ($@) {

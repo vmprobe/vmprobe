@@ -4,8 +4,9 @@ use common::sense;
 
 use parent 'Vmprobe::Resource::Base::AllRemotes';
 
+use Vmprobe::Util;
+
 use Time::HiRes;
-use Sereal::Encoder;
 use Guard;
 
 
@@ -170,7 +171,7 @@ sub cmd_take_snapshot {
 
             open(my $fh, '>:raw', $filename) || die "couldn't open $filename for writing: $!";
 
-            print $fh Sereal::Encoder::encode_sereal($data, { compress => 1, });
+            print $fh sereal_encode($data);
         }
     );
 }

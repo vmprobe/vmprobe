@@ -5,12 +5,6 @@ use common::sense;
 use Vmprobe::Cmd;
 use Vmprobe::Util;
 
-use Sereal::Decoder;
-use Sereal::Encoder;
-
-
-my $decoder = Sereal::Decoder->new;
-my $encoder = Sereal::Encoder->new({ compress => 1, });
 
 
 our $spec = q{
@@ -67,7 +61,7 @@ sub run {
 
 
 sub process_msg {
-    my $msg = $decoder->decode($_[0]);
+    my $msg = sereal_decode($_[0]);
 
     die "bad probe name: $msg->{probe}" if !Vmprobe::Util::is_valid_package_name($msg->{probe});
 
@@ -92,7 +86,7 @@ sub process_msg {
         };
     }
 
-    my $encoded_output = $encoder->encode($output);
+    my $encoded_output = sereal_encode($output);
 
     syswrite(\*STDOUT, pack("w", length($encoded_output)));
     syswrite(\*STDOUT, $encoded_output);

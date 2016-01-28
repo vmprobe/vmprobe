@@ -8,14 +8,8 @@ use AnyEvent::Handle;
 use Scalar::Util;
 use Callback::Frame;
 
-use Sereal::Decoder;
-use Sereal::Encoder;
-
 use Vmprobe::Util;
 
-
-my $decoder = Sereal::Decoder->new;
-my $encoder = Sereal::Encoder->new;
 
 
 our $global_params = {};
@@ -194,7 +188,7 @@ sub probe {
 
     $self->{cbs_in_flight}->{0 + $cb} = $cb;
 
-    my $msg = $encoder->encode({
+    my $msg = sereal_encode({
                 probe => $probe,
                 args => $args,
               });
@@ -208,7 +202,7 @@ sub probe {
             delete $self->{cbs_in_flight}->{0 + $cb};
 
             eval {
-                $response = $decoder->decode($response);
+                $response = sereal_decode($response);
             };
 
             if ($@) {

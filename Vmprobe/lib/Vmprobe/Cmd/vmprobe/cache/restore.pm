@@ -6,8 +6,6 @@ use Vmprobe::Cmd;
 use Vmprobe::Util;
 use Vmprobe::Poller;
 
-use Sereal::Decoder;
-
 
 our $spec = q{
 
@@ -29,7 +27,7 @@ sub run {
     ## Load snapshot
 
     my $encoded_snapshot = Vmprobe::Util::load_file(opt->{input} // '-');
-    my $snapshot = Sereal::Decoder::decode_sereal($encoded_snapshot);
+    my $snapshot = sereal_decode($encoded_snapshot);
 
     ## Apply snapshot
 
