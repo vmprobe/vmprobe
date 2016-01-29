@@ -98,13 +98,13 @@ sub cmd_lock_sel {
           num_pages => $args->{num_pages},
         },
         sub {
-            my ($res) = @_;
+            my ($res, $connection_id) = @_;
             undef $job;
 
             my $lock_id = $res->{lock_id};
 
             $self->{locks}->{$lock_id} = guard {
-                $remote->probe('cache::unlock', { lock_id => $lock_id, }, sub {});
+                $remote->probe('cache::unlock', { lock_id => $lock_id, }, sub {}, $connection_id);
             };
 
             $self->update({
