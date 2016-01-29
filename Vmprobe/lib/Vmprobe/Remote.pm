@@ -89,10 +89,14 @@ sub refresh_version_info {
 
     delete $self->{version_info};
 
-    $self->probe('version', {}, sub {
-        my ($version) = @_;
-        $self->add_version_info($version);
-    });
+    frame_try {
+        $self->probe('version', {}, sub {
+            my ($version) = @_;
+            $self->add_version_info($version);
+        });
+    } frame_catch {
+        say STDERR "error refreshing version info: $@";
+    };
 }
 
 
