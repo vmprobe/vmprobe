@@ -5,6 +5,7 @@ use common::sense;
 use parent 'Vmprobe::Resource::Base';
 
 use AnyEvent;
+use Callback::Frame;
 
 
 sub get_initial_view {
@@ -39,7 +40,7 @@ sub on_remote_state_change {
         remotes => {
             $self->get_remote_position($remote) => {
                 '$merge' => {
-                    remote_state => $remote->{state},
+                    remote_state => $remote->get_state(),
                 },
             },
         },
@@ -87,15 +88,20 @@ sub _update_polls {
         $poll->{handler} = sub {
             undef $poll->{timer};
 
-            $remote->probe($poll->{probe_name}, $poll->{args}, sub {
-                return if $poll->{stop};
+            frame_try {
+                $remote->probe($poll->{probe_name}, $poll->{args}, sub {
+                    return if $poll->{stop};
 
-                my $result = shift;
+                    my $result = shift;
 
-                $poll->{on_result}->($result);
+                    $poll->{on_result}->($result);
 
+                    $poll->{timer} = AE::timer($poll->{frequency} // 1, 0, $poll->{handler});
+                });
+            } frame_catch {
+                say STDERR "error in probe: $@";
                 $poll->{timer} = AE::timer($poll->{frequency} // 1, 0, $poll->{handler});
-            });
+            };
         };
 
         $poll->{handler}->();

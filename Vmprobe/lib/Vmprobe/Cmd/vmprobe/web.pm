@@ -96,7 +96,7 @@ sub run {
 our $dev_server_keepalive_pipe;
 
 sub web_javascript_handler {
-    if ($Vmprobe::VERSION eq 'REPO_DEV_MODE' || opt->{repo_dev_mode}) {
+    if (!defined $ENV{VMPROBE_WEBDIST_DIR} && ($Vmprobe::VERSION eq 'REPO_DEV_MODE' || opt->{repo_dev_mode})) {
         require FindBin;
 
         my $web_dir = "$FindBin::Bin/../../web";
@@ -131,7 +131,7 @@ sub web_javascript_handler {
 
     require File::ShareDir;
 
-    my $webdist_dir = File::ShareDir::dist_dir('Vmprobe') . '/webdist/';
+    my $webdist_dir = $ENV{VMPROBE_WEBDIST_DIR} // File::ShareDir::dist_dir('Vmprobe') . '/webdist/';
 
     my $app = sub {
         return [404, ['Content-Type' => 'text/html'], ['404 not found']];

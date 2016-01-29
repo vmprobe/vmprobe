@@ -32,7 +32,7 @@ class CountSummary extends PureComponent {
     let num_ok=0, num_err=0, num_other=0;
 
     for (let remote of this.props.remotes) {
-      if (remote.state === 'ok') num_ok++;
+      if (remote.state === 'ok' && remote['version_info']) num_ok++;
       else if (remote.state === 'fail') num_err++;
       else num_other++;
     }
@@ -104,26 +104,45 @@ const ServerStateCell = ({rowIndex, data, ...props}) => {
   let style = {};
   let msg = '';
 
-  if (state === 'connecting') {
-    msg = 'connecting...';
-  } else if (state === 'ssh_ok') {
-    msg = 'established...';
-  } else if (state === 'ok') {
-    msg = <span className="glyphicon glyphicon-ok" ariaHidden="true" />;
-    style.color = 'green';
+  if (state === 'ok') {
+    if (data[rowIndex]['version_info']) {
+      msg = <span style={{color: 'green'}} className="glyphicon glyphicon-ok" ariaHidden="true" />;
+    } else {
+      msg = (
+              <Tooltip
+                parent={<span className="glyphicon glyphicon-refresh" ariaHidden="true" />}
+                tip="Loading version information..."
+              />
+            );
+    }
   } else if (state === 'fail') {
     let errMsg = data[rowIndex]['error_message'];
     msg = (<Tooltip
              parent={<span style={{color: "red"}} className="glyphicon glyphicon-fire" ariaHidden="true" />}
              tip={() => <span style={{color: "red"}}>{errMsg}</span>}
            />);
+  } else if (state == 'ssh_wait') {
+    msg = (
+            <Tooltip
+              parent={<span className="glyphicon glyphicon-refresh" ariaHidden="true" />}
+              tip="SSH connection in progress..."
+            />
+          );
+  } else if (state == 'disconnected') {
+    msg = <span className="glyphicon glyphicon-ban-circle" ariaHidden="true" />;
   } else {
     msg = state;
   }
 
+  let num_connections = data[rowIndex]['num_connections'] || 0;
+
   return (
     <Cell {...props}>
-      <span style={style}>{msg}</span>
+      <span>{msg}</span>
+      <Tooltip
+        tip={`${num_connections} active connections`}
+        parent={<span>({num_connections})</span>}
+      />
     </Cell>
   );
 };

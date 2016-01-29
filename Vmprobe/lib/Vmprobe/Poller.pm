@@ -53,7 +53,7 @@ sub poll {
             if ($remotes_cache->{$remote}) {
                 push @remotes, $remotes_cache->{$remote};
             } else {
-                $remotes_cache->{$remote} = Vmprobe::Remote->new( host => $remote );
+                $remotes_cache->{$remote} = Vmprobe::Remote->new( host => $remote, collect_version_info => 0, );
                 push @remotes, $remotes_cache->{$remote};
             }
         }
@@ -65,7 +65,7 @@ sub poll {
         $poll_cv->begin;
 
         frame_try {
-            $remote->probe($params->{probe_name}, $params->{args}, fub {
+            $remote->probe($params->{probe_name}, $params->{args}, sub {
                 my $result = shift;
 
                 $params->{cb}->($remote, $result)

@@ -1,7 +1,4 @@
 back-end:
-  * bug: fix memory leaks in perl process
-  * ensure that closing a remote will kill the connecting process
-  * refactor Vmprobe::Remote to handle multiple connections
   * detect when SSH keys aren't setup, show useful error msg
 
 web ui:
@@ -12,6 +9,7 @@ web ui:
   * way to save and reload settings
   * time-series plotting
   * left-align column contents
+  * way to remove notifications like the flame errors
 
 cmd line:
   * output should always be in deterministic order (usually by specified remote order)
