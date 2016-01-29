@@ -327,6 +327,7 @@ class Display extends PureComponent {
     if (!selection) return null;
 
     let summary = row[2];
+    if (!summary) return null;
 
     let sel_start = Math.floor(selection[0] * summary.length);
     let sel_end = Math.floor(selection[1] * summary.length) - 1;
