@@ -39,7 +39,7 @@ sub on_remote_state_change {
         remotes => {
             $self->get_remote_position($remote) => {
                 '$merge' => {
-                    remote_state => $remote->{state},
+                    remote_state => $remote->get_state(),
                 },
             },
         },

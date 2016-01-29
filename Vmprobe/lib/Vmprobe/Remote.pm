@@ -8,8 +8,8 @@ use AnyEvent::Handle;
 use Scalar::Util;
 use Callback::Frame;
 
+use Vmprobe::Remote::Connection;
 use Vmprobe::Util;
-
 
 
 our $global_params = {};
@@ -22,20 +22,58 @@ sub new {
     my $self = {};
     bless $self, $class;
 
-    $self->{host} = $args{host};
+    ## Args
 
-    $self->{state} = 'connecting';
-    $self->{on_state_change} = $args{on_state_change} || sub {};
-    $self->{on_error_message} = $args{on_error_message} || sub {};
+    $self->{host} = $args{host};
+    $self->{on_state_change} = $args{on_state_change} // sub {};
+    $self->{max_connections} = $args{max_connections} // 3;
+
+    ## Internals
+
+    $self->{pending_probes} = [];
+    $self->{connections} = {};
+    $self->{idle_connections} = [];
 
     return $self;
 }
 
 
-sub state_change {
-    my ($self, $new_state) = @_;
+sub add_connection {
+    my ($self) = @_;
 
-    $self->{state} = $new_state;
+    my $connection_id = get_session_token();
+
+    my $connection = Vmprobe::Remote::Connection->new(remote_obj => $self, connection_id => $connection_id);
+
+    $self->{connections}->{$connection_id} = $connection;
+
+    $self->{on_state_change}->($self);
+}
+
+
+
+sub get_state {
+    my ($self) = @_;
+
+    if (scalar(keys(%{ $self->{connections} })) == 0) {
+        return 'fail' if $self->{last_error_message};
+    }
+
+    return 'ok';
+}
+
+sub get_num_connections {
+    my ($self) = @_;
+
+    return scalar(keys(%{ $self->{connections} }));
+}
+
+sub error_message {
+    my ($self, $err_msg) = @_;
+
+    say STDERR "$self->{host} error: $err_msg";
+
+    $self->{last_error_message} = $err_msg;
     $self->{on_state_change}->($self);
 }
 
@@ -46,183 +84,117 @@ sub add_version_info {
     $self->{on_state_change}->($self);
 }
 
-sub error_message {
-    my ($self, $message) = @_;
+sub refresh_version_info {
+    my ($self) = @_;
 
-    $self->{last_error_message} = $message;
-    $self->{on_error_message}->($self, $message);
-}
+    delete $self->{version_info};
 
-sub teardown_handle {
-    my ($self, $err_msg) = @_;
-
-    $self->error_message($err_msg);
-    $self->state_change('fail');
-
-    say STDERR $err_msg;
-
-    if ($self->{handle}) {
-        $self->{handle}->destroy;
-        delete $self->{handle};
-    }
-
-    delete $self->{pending_handle_cbs};
-
-    foreach my $cb (values %{ $self->{cbs_in_flight} }) {
-        frame(existing_frame => $cb, code => sub {
-            die "connection error: $err_msg";
-        })->();
-    }
-
-    delete $self->{cbs_in_flight};
-}
-
-
-sub _populate_handle {
-    my ($self, $cb) = @_;
-
-    if ($self->{handle}) {
-        $cb->();
-        return;
-    }
-
-    push @{ $self->{pending_handle_cbs} }, $cb;
-
-    return if @{ $self->{pending_handle_cbs} } > 1;
-
-    my $vmprobe_binary;
-
-    $vmprobe_binary //= $global_params->{vmprobe_binary};
-    $vmprobe_binary //= $0 if $self->{host} eq 'localhost';
-    $vmprobe_binary //= 'vmprobe';
-
-    my $cmd = [ $vmprobe_binary, 'raw', ];
-
-    unshift @$cmd, qw(sudo -p -n --)
-        if $global_params->{sudo};
-
-    if ($self->{host} eq 'localhost') {
-        $self->_start_cmd($cmd);
-        $self->state_change('ok');
-        my $cbs = $self->{pending_handle_cbs};
-        delete $self->{pending_handle_cbs};
-        foreach my $cb (@$cbs) {
-          $cb->();
-        }
-    } else {
-        require Net::OpenSSH;
-
-        my $master_pipe = Vmprobe::Util::capture_stderr {
-            $self->{ssh} = Net::OpenSSH->new($self->{host}, key_path => $global_params->{ssh_private_key}, async => 1);
-        };
-
-        my $master_pipe_output = '';
-
-        $self->{master_stderr_watcher} = AE::io $master_pipe, 0, sub {
-            my $rc = sysread($master_pipe, $master_pipe_output, 16384, length($master_pipe_output));
-            return if $rc || $! == Errno::EINTR;
-            delete $self->{master_stderr_watcher};
-        };
-
-        ## FIXME: use inotify etc
-        $self->{ssh_timer} = AE::timer 0.1, 0.1, sub {
-            if ($self->{ssh}->error) {
-                delete $self->{ssh_timer};
-                $self->teardown_handle("ssh failed: " . ($master_pipe_output || $self->{ssh}->error));
-            }
-
-            if ($self->{ssh}->wait_for_master(1)) {
-                delete $self->{ssh_timer};
-                $self->_start_cmd([ $self->{ssh}->make_remote_command({ tty => 1 }, @$cmd) ]);
-                $self->state_change('ok');
-                my $cbs = $self->{pending_handle_cbs};
-                delete $self->{pending_handle_cbs};
-                foreach my $cb (@$cbs) {
-                  $cb->();
-                }
-            }
-        };
-    }
-}
-
-sub _start_cmd {
-    my ($self, $cmd) = @_;
-
-    $self->state_change('ssh_ok');
-
-    my ($fh1, $fh2) = AnyEvent::Util::portable_socketpair;
-
-    $self->{cmd_cv} = AnyEvent::Util::run_cmd($cmd,
-                          '<' => $fh1,
-                          '>' => $fh1,
-                          '2>' => \my $err_msg,
-                          close_all => 1,
-                          '$$' => \my $pid,
-                      );
-
-    $self->{cmd_cv}->cb(sub {
-        my $rc = shift;
-        delete $self->{cmd_cv};
-
-        $self->teardown_handle("connecting process died: $err_msg");
+    $self->probe('version', {}, sub {
+        my ($version) = @_;
+        $self->add_version_info($version);
     });
+}
 
-    close($fh1);
 
-    $self->{handle} = AnyEvent::Handle->new(
-                          fh => $fh2,
-                          on_error => sub {
-                              my ($handle, $fatal, $msg) = @_;
-                              $self->teardown_handle("connection lost: $err_msg");
-                          });
+sub shutdown {
+    my ($self) = @_;
+
+    ## Resources just remove the reference to the remote so don't bother sending state change info as we shutdown
+    $self->{on_state_change} = sub {};
+
+    foreach my $connection (values %{ $self->{connections} }) {
+        $connection->_teardown_handle;
+    }
+
+    delete $self->{reconnection_timer};
 }
 
 
 
 sub probe {
-    my ($self, $probe, $args, $cb) = @_;
+    my ($self, $probe_name, $args, $cb, $connection_id) = @_;
 
     if (!Callback::Frame::is_frame($cb)) {
         $cb = frame(code => $cb);
     }
 
-    $self->{cbs_in_flight}->{0 + $cb} = $cb;
-
     my $msg = sereal_encode({
-                probe => $probe,
-                args => $args,
+                  probe => $probe_name,
+                  args => $args,
               });
 
-    $self->_populate_handle(sub {
-        $self->{handle}->push_write(packstring => "w", $msg);
+    my $probe = {
+        cb => $cb,
+        msg => $msg,
+    };
 
-        $self->{handle}->push_read(packstring => "w", sub {
-            my ($handle, $response) = @_;
+    if (defined $connection_id) {
+        my $connection = $self->{connections}->{$connection_id};
 
-            delete $self->{cbs_in_flight}->{0 + $cb};
-
-            eval {
-                $response = sereal_decode($response);
-            };
-
-            if ($@) {
-                frame(existing_frame => $cb, code => sub {
-                    die "error deserializing msg: $@";
-                })->();
-            }
-
-            if (exists $response->{error}) {
-                frame(existing_frame => $cb, code => sub {
-                    die $response->{error};
-                })->();
-            } else {
-                $cb->($response->{result});
-            }
-        });
-    });
+        if ($connection) {
+            $connection->queue_probe($probe);
+        } else {
+            frame(existing_frame => $probe->{cb}, code => sub {
+                die "connection $connection_id no longer established";
+            })->();
+        }
+    } else {
+        unshift @{ $self->{pending_probes} }, $probe;
+        $self->_drain_probes;
+    }
 }
 
 
+
+
+sub _is_idle {
+    my ($self, $connection) = @_;
+
+    push @{ $self->{idle_connections} }, $connection;
+
+    $self->_drain_probes;
+}
+
+
+sub _is_disconnected {
+    my ($self, $connection) = @_;
+
+    delete $self->{connections}->{$connection->{connection_id}};
+    $self->{idle_connections} = [ grep { $_ != $connection } @{ $self->{idle_connections} } ];
+
+    if (keys %{ $self->{connections} } == 0) {
+        $self->{reconnection_timer} //= AE::timer 4, 0, sub {
+            delete $self->{reconnection_timer};
+            $self->refresh_version_info;
+        };
+
+        # Host might have been restarted/upgraded
+        delete $self->{version_info};
+    }
+
+    $self->{on_state_change}->($self);
+}
+
+
+sub _drain_probes {
+    my ($self) = @_;
+
+    return if !@{ $self->{pending_probes} };
+
+    if (!@{ $self->{idle_connections} }) {
+        return if keys(%{ $self->{connections} }) >= $self->{max_connections};
+        return if exists $self->{reconnection_timer};
+
+        $self->add_connection;
+        return;
+    }
+
+    my $connection = pop @{ $self->{idle_connections} };
+
+    $connection->queue_probe(pop @{ $self->{pending_probes} });
+
+    $self->_drain_probes;
+}
 
 
 1;

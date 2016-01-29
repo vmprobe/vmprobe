@@ -46,14 +46,11 @@ sub add_remote {
         $self->{resources}->{$resource_id}->on_add_remote($remote);
     }
 
+    $remote->refresh_version_info;
+
     foreach my $resource_id (keys %{ $self->{resources} }) {
         $self->{resources}->{$resource_id}->on_init_remote($remote);
     }
-
-    $remote->probe('version', {}, sub {
-        my ($version) = @_;
-        $remote->add_version_info($version);
-    });
 
     return $remote;
 }
@@ -80,6 +77,8 @@ sub remove_remote {
     }
 
     splice(@{ $self->{remotes} }, $position, 1);
+
+    $remote->shutdown;
 }
 
 

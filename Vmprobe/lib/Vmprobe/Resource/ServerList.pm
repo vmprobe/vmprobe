@@ -13,17 +13,25 @@ sub get_initial_view {
 }
 
 
+sub _build_remote_state_update {
+    my ($remote) = @_;
+
+    return {
+        host => $remote->{host},
+        state => $remote->get_state(),
+        num_connections => $remote->get_num_connections(),
+        error_message => $remote->{last_error_message},
+        version_info => $remote->{version_info},
+    };
+}
+
+
 sub on_add_remote {
     my ($self, $remote) = @_;
 
     $self->update({
         remotes => {
-            '$push' => [{
-                host => $remote->{host},
-                state => $remote->{state},
-                error_message => $remote->{last_error_message},
-                version_info => $remote->{version_info},
-            }],
+            '$push' => [_build_remote_state_update($remote)],
         },
     });
 }
@@ -44,11 +52,7 @@ sub on_remote_state_change {
     $self->update({
         remotes => {
             $self->get_remote_position($remote) => {
-                '$merge' => {
-                    state => $remote->{state},
-                    error_message => $remote->{last_error_message},
-                    version_info => $remote->{version_info},
-                },
+                '$merge' => _build_remote_state_update($remote),
             },
         },
     });
