@@ -65,7 +65,7 @@ sub poll {
         $poll_cv->begin;
 
         frame_try {
-            $remote->probe($params->{probe_name}, $params->{args}, fub {
+            $remote->probe($params->{probe_name}, $params->{args}, sub {
                 my $result = shift;
 
                 $params->{cb}->($remote, $result)

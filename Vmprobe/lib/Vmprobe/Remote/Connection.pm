@@ -24,67 +24,37 @@ sub new {
     $self->{host} = $self->{remote_obj}->{host};
     $self->{pending_probes} = [];
 
-
-    $self->_populate_handle;
-
     return $self;
 }
 
-sub _populate_handle {
+
+sub cmd_ready {
     my ($self) = @_;
 
-    my $vmprobe_binary;
-
-    $vmprobe_binary //= $Vmprobe::Remote::global_params->{vmprobe_binary};
-    $vmprobe_binary //= $0 if $self->{host} eq 'localhost';
-    $vmprobe_binary //= 'vmprobe';
-
-    my $cmd = [ $vmprobe_binary, 'raw', ];
-
-    unshift @$cmd, qw(sudo -p -n --)
-        if $Vmprobe::Remote::global_params->{sudo};
-
-    if ($self->{host} eq 'localhost') {
-        $self->_start_cmd($cmd);
-    } else {
-        require Net::OpenSSH;
-
-        $self->{master_pipe} = Vmprobe::Util::capture_stderr {
-            $self->{ssh} = Net::OpenSSH->new($self->{host}, key_path => $Vmprobe::Remote::global_params->{ssh_private_key}, async => 1);
-        };
-
-        $self->{master_pipe_output} = '';
-
-        $self->{master_stderr_watcher} = AE::io $self->{master_pipe}, 0, sub {
-            my $rc = sysread($self->{master_pipe}, $self->{master_pipe_output}, 16384, length($self->{master_pipe_output}));
-            return if $rc || $! == Errno::EINTR;
-            delete $self->{master_stderr_watcher};
-        };
-
-        ## FIXME: use inotify etc
-        $self->{ssh_timer} = AE::timer 0.1, 0.1, sub {
-            if ($self->{ssh}->error) {
-                delete $self->{ssh_timer};
-                $self->_teardown_handle("ssh failed: " . ($self->{master_pipe_output} || $self->{ssh}->error));
-            }
-
-            if ($self->{ssh}->wait_for_master(1)) {
-                delete $self->{ssh_timer};
-                $self->_start_cmd([ $self->{ssh}->make_remote_command({ tty => 1 }, @$cmd) ]);
-            }
-        };
-    }
+    $self->_drain_probes;
 }
 
-sub _start_cmd {
-    my ($self, $cmd) = @_;
 
+sub _open_handle {
+    my ($self) = @_;
+
+    die "remote_obj doesn't have a connection_cmd"
+        if !$self->{remote_obj}->{connection_cmd};
+
+say "OH"; use Data::Dumper; say "CMD: " . Dumper($self->{remote_obj}->{connection_cmd});
     my ($fh1, $fh2) = AnyEvent::Util::portable_socketpair;
 
-    $self->{cmd_cv} = AnyEvent::Util::run_cmd($cmd,
+    my $ssh_stderr = '';
+
+    $self->{cmd_cv} = AnyEvent::Util::run_cmd($self->{remote_obj}->{connection_cmd},
                           '<' => $fh1,
                           '>' => $fh1,
-                          '2>' => \my $err_msg,
+                          '2>' => sub {
+                                      my $data = shift;
+                                      return if !defined $data;
+                                      $ssh_stderr .= $data;
+                                      say STDERR "stderr from raw process: $data";
+                                  },
                           close_all => 1,
                           '$$' => \my $pid,
                       );
@@ -93,7 +63,9 @@ sub _start_cmd {
         my $rc = shift;
         delete $self->{cmd_cv};
 
-        $self->_teardown_handle("connecting process died: $err_msg");
+        my $err_msg = "connecting process died: $ssh_stderr";
+        $self->{remote_obj}->error_message($err_msg);
+        $self->_teardown($err_msg);
     });
 
     close($fh1);
@@ -102,10 +74,10 @@ sub _start_cmd {
                           fh => $fh2,
                           on_error => sub {
                               my ($handle, $fatal, $msg) = @_;
-                              $self->_teardown_handle("connection lost: $err_msg");
+                              my $err_msg = "connection lost: $msg";
+                              $self->{remote_obj}->error_message($err_msg);
+                              $self->_teardown($err_msg);
                           });
-
-    $self->_drain_probes;
 }
 
 
@@ -118,13 +90,11 @@ sub queue_probe {
 }
 
 
-sub _teardown_handle {
+sub _teardown {
     my ($self, $err_msg) = @_;
 
     warn "connection already torn down" if $self->{zombie};
     $self->{zombie} = 1;
-
-    $self->{remote_obj}->error_message($err_msg);
 
     if ($self->{handle}) {
         $self->{handle}->destroy;
@@ -149,34 +119,23 @@ sub _teardown_handle {
         delete $self->{cmd_cv};
     }
 
-    if ($self->{ssh}) {
-        $self->{ssh}->disconnect(1);
-        $self->{ssh_timer} = AE::timer 0.1, 0.1, sub {
-            if ($self->{ssh}->error || $self->{ssh}->wait_for_master(1)) {
-                if ($self->{ssh}->error) {
-                    warn "Error from ssh master while shutting down: " . ($self->{master_pipe_output} || $self->{ssh}->error);
-                }
+    $self->{remote_obj}->_connection_is_disconnected($self);
 
-                delete $self->{master_pipe};
-                delete $self->{ssh_timer};
-                delete $self->{ssh};
-                delete $self->{master_stderr_watcher};
-            }
-        };
-    }
-
-    $self->{remote_obj}->_is_disconnected($self);
+    delete $self->{remote_obj};
 }
 
 
 sub _drain_probes {
     my ($self) = @_;
 
-    return if !$self->{handle};
+    return if $self->{zombie};
+    return if !$self->{remote_obj}->{connection_cmd};
     return if exists $self->{probe_in_progress};
 
+    $self->_open_handle if !$self->{handle};
+
     if (!@{ $self->{pending_probes} }) {
-        $self->{remote_obj}->_is_idle($self);
+        $self->{remote_obj}->_connection_is_idle($self);
         return;
     }
 
