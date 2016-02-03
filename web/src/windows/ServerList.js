@@ -106,10 +106,14 @@ const ServerStateCell = ({rowIndex, data, ...props}) => {
 
   if (state === 'ok') {
     if (data[rowIndex]['version_info']) {
-      msg = <span className="glyphicon glyphicon-ok" ariaHidden="true" />;
-      style.color = 'green';
+      msg = <span style={{color: 'green'}} className="glyphicon glyphicon-ok" ariaHidden="true" />;
     } else {
-      msg = <span className="glyphicon glyphicon-refresh" ariaHidden="true" />;
+      msg = (
+              <Tooltip
+                parent={<span className="glyphicon glyphicon-refresh" ariaHidden="true" />}
+                tip="Loading version information..."
+              />
+            );
     }
   } else if (state === 'fail') {
     let errMsg = data[rowIndex]['error_message'];
@@ -117,6 +121,15 @@ const ServerStateCell = ({rowIndex, data, ...props}) => {
              parent={<span style={{color: "red"}} className="glyphicon glyphicon-fire" ariaHidden="true" />}
              tip={() => <span style={{color: "red"}}>{errMsg}</span>}
            />);
+  } else if (state == 'ssh_wait') {
+    msg = (
+            <Tooltip
+              parent={<span className="glyphicon glyphicon-refresh" ariaHidden="true" />}
+              tip="SSH connection in progress..."
+            />
+          );
+  } else if (state == 'disconnected') {
+    msg = <span className="glyphicon glyphicon-ban-circle" ariaHidden="true" />;
   } else {
     msg = state;
   }
@@ -125,7 +138,7 @@ const ServerStateCell = ({rowIndex, data, ...props}) => {
 
   return (
     <Cell {...props}>
-      <span style={style}>{msg}</span>
+      <span>{msg}</span>
       <Tooltip
         tip={`${num_connections} active connections`}
         parent={<span>({num_connections})</span>}

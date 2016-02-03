@@ -18,35 +18,30 @@ sub new {
 
     $self->{remote_obj} = $args{remote_obj};
     $self->{connection_id} = $args{connection_id};
+    $self->{cmd} = $args{cmd};
 
     ## Internals
 
     $self->{host} = $self->{remote_obj}->{host};
     $self->{pending_probes} = [];
 
+
+    $self->_open_handle;
+    $self->_drain_probes;
+
     return $self;
 }
 
-
-sub cmd_ready {
-    my ($self) = @_;
-
-    $self->_drain_probes;
-}
 
 
 sub _open_handle {
     my ($self) = @_;
 
-    die "remote_obj doesn't have a connection_cmd"
-        if !$self->{remote_obj}->{connection_cmd};
-
-say "OH"; use Data::Dumper; say "CMD: " . Dumper($self->{remote_obj}->{connection_cmd});
     my ($fh1, $fh2) = AnyEvent::Util::portable_socketpair;
 
     my $ssh_stderr = '';
 
-    $self->{cmd_cv} = AnyEvent::Util::run_cmd($self->{remote_obj}->{connection_cmd},
+    $self->{cmd_cv} = AnyEvent::Util::run_cmd($self->{cmd},
                           '<' => $fh1,
                           '>' => $fh1,
                           '2>' => sub {
@@ -129,10 +124,7 @@ sub _drain_probes {
     my ($self) = @_;
 
     return if $self->{zombie};
-    return if !$self->{remote_obj}->{connection_cmd};
     return if exists $self->{probe_in_progress};
-
-    $self->_open_handle if !$self->{handle};
 
     if (!@{ $self->{pending_probes} }) {
         $self->{remote_obj}->_connection_is_idle($self);

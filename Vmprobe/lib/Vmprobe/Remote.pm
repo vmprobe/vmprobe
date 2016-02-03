@@ -27,33 +27,48 @@ sub new {
     $self->{host} = $args{host};
     $self->{on_state_change} = $args{on_state_change} // sub {};
     $self->{max_connections} = $args{max_connections} // 3;
+    $self->{reconnection_interval} = $args{reconnection_interval} // 5;
+    $self->{collect_version_info} = $args{collect_version_info} // 1;
 
     ## Internals
+
+    $self->{num_connections} = 0;
+    $self->{state} = 'disconnected'; ## disconnected, ssh_wait, ok
 
     $self->{pending_probes} = [];
     $self->{connections} = {};
     $self->{idle_connections} = [];
+
+    {
+        local $self->{on_state_change} = sub {};
+        $self->_init;
+    }
 
     return $self;
 }
 
 
 
+sub set_state {
+    my ($self, $new_state) = @_;
+
+    $self->{state} = $new_state;
+    $self->{on_state_change}->($self);
+}
+
 sub get_state {
     my ($self) = @_;
 
-    if (scalar(keys(%{ $self->{connections} })) == 0) {
-        return 'fail' if $self->{last_error_message};
-    }
+    return 'fail' if $self->{state} eq 'disconnected' && $self->{last_error_message};
 
-    return 'ok';
+    return $self->{state};
 }
 
 
 sub get_num_connections {
     my ($self) = @_;
 
-    return scalar(keys(%{ $self->{connections} }));
+    return $self->{num_connections};
 }
 
 
@@ -88,12 +103,65 @@ sub refresh_version_info {
 }
 
 
-
-sub _init_connection {
+sub _init {
     my ($self) = @_;
 
-    return if $self->{connection_inited};
-    $self->{connection_inited} = 1;
+    $self->_connect_ssh;
+    $self->refresh_version_info if $self->{collect_version_info};
+}
+
+sub _connect_ssh {
+    my ($self) = @_;
+
+    return if $self->{state} ne 'disconnected';
+
+    if ($self->{host} eq 'localhost') {
+        $self->set_state('ok');
+        $self->_drain_probes;
+        return;
+    }
+
+    require Net::OpenSSH;
+
+    $self->set_state('ssh_wait');
+
+    $self->{ssh_master_pipe} = Vmprobe::Util::capture_stderr {
+        $self->{ssh} = Net::OpenSSH->new($self->{host}, key_path => $Vmprobe::Remote::global_params->{ssh_private_key}, async => 1);
+    };
+
+    $self->{ssh_master_pipe_output} = '';
+
+    $self->{ssh_master_stderr_watcher} = AE::io $self->{ssh_master_pipe}, 0, sub {
+        my $rc = sysread($self->{ssh_master_pipe}, $self->{ssh_master_pipe_output}, 16384, length($self->{ssh_master_pipe_output}));
+        return if $rc || $! == Errno::EINTR;
+        delete $self->{ssh_master_stderr_watcher};
+        close($self->{ssh_master_pipe});
+
+        my $err_msg = "ssh control master exited: $self->{ssh_master_pipe_output}";
+        $self->error_message($err_msg);
+        $self->_teardown_ssh_master($err_msg);
+    };
+
+    ## FIXME: use inotify etc
+    $self->{ssh_timer} = AE::timer 0.1, 0.1, sub {
+        if ($self->{ssh}->error) {
+            delete $self->{ssh_timer};
+            my $err_msg = "ssh failed: " . ($self->{ssh_master_pipe_output} || $self->{ssh}->error);
+            $self->error_message($err_msg);
+            $self->_teardown_ssh_master($err_msg);
+        } elsif ($self->{ssh}->wait_for_master(1)) {
+            delete $self->{ssh_timer};
+            $self->set_state('ok');
+            $self->_drain_probes;
+        }
+    };
+}
+
+
+sub _get_handle_cmd {
+    my ($self) = @_;
+
+    die "not in state ok" if $self->{state} ne 'ok';
 
     my $vmprobe_binary;
 
@@ -107,52 +175,31 @@ sub _init_connection {
         if $Vmprobe::Remote::global_params->{sudo};
 
     if ($self->{host} eq 'localhost') {
-        $self->_cmd_ready($cmd);
-    } else {
-        require Net::OpenSSH;
-
-$Net::OpenSSH::debug = ~0;
-        $self->{master_pipe} = Vmprobe::Util::capture_stderr {
-            $self->{ssh} = Net::OpenSSH->new($self->{host}, key_path => $Vmprobe::Remote::global_params->{ssh_private_key}, async => 1);
-        };
-
-        $self->{master_pipe_output} = '';
-
-        $self->{master_stderr_watcher} = AE::io $self->{master_pipe}, 0, sub {
-            my $rc = sysread($self->{master_pipe}, $self->{master_pipe_output}, 16384, length($self->{master_pipe_output}));
-            return if $rc || $! == Errno::EINTR;
-            delete $self->{master_stderr_watcher};
-            close($self->{master_pipe});
-        };
-
-        ## FIXME: use inotify etc
-        $self->{ssh_timer} = AE::timer 0.1, 0.1, sub {
-            if ($self->{ssh}->error) {
-                delete $self->{ssh_timer};
-                my $err_msg = "ssh failed: " . ($self->{master_pipe_output} || $self->{ssh}->error);
-                $self->error_message($err_msg);
-                $self->_teardown_ssh_master($err_msg);
-            }
-
-            if ($self->{ssh}->wait_for_master(1)) {
-                delete $self->{ssh_timer};
-                $self->_cmd_ready([ $self->{ssh}->make_remote_command({ tty => 1 }, @$cmd) ]);
-            }
-        };
+        return $cmd;
     }
+
+    die "no ssh object" if !$self->{ssh};
+
+    return [ $self->{ssh}->make_remote_command(@$cmd) ];
 }
 
 
-sub _cmd_ready {
-    my ($self, $cmd) = @_;
+sub _add_connection {
+    my ($self) = @_;
 
-    $self->{connection_cmd} = $cmd;
+    my $connection_id = get_session_token();
 
-    foreach my $connection (values %{ $self->{connections} }) {
-        $connection->cmd_ready;
-    }
+    my $cmd = $self->_get_handle_cmd;
 
-    $self->_drain_probes;
+    my $connection = Vmprobe::Remote::Connection->new(
+                         remote_obj => $self,
+                         connection_id => $connection_id,
+                         cmd => $cmd,
+                     );
+
+    $self->{connections}->{$connection_id} = $connection;
+
+    $self->{num_connections}++;
 
     $self->{on_state_change}->($self);
 }
@@ -161,8 +208,6 @@ sub _cmd_ready {
 
 sub probe {
     my ($self, $probe_name, $args, $cb, $connection_id) = @_;
-
-    $self->_init_connection;
 
     if (!Callback::Frame::is_frame($cb)) {
         $cb = frame(code => $cb);
@@ -198,41 +243,27 @@ sub probe {
 sub _drain_probes {
     my ($self) = @_;
 
-    return if $self->{zombie};
-    return if !$self->{connection_cmd};
-    return if !@{ $self->{pending_probes} };
+    while(1) {
+        return if $self->{zombie};
+        return if $self->{state} ne 'ok';
+        return if !@{ $self->{pending_probes} };
 
-    if (!@{ $self->{idle_connections} }) {
-my $z = keys(%{ $self->{connections} }); say "CURR CONNS: $z";
-        return if keys(%{ $self->{connections} }) >= $self->{max_connections};
-        return if exists $self->{reconnection_timer};
+        if (!@{ $self->{idle_connections} }) {
+            return if $self->{num_connections} >= $self->{max_connections};
+            return if exists $self->{reconnection_timer};
 
-        $self->add_connection;
-        return;
+            $self->_add_connection;
+            return;
+        }
+
+        my $connection = pop @{ $self->{idle_connections} };
+
+        $connection->queue_probe(pop @{ $self->{pending_probes} });
     }
-
-    my $connection = pop @{ $self->{idle_connections} };
-
-    $connection->queue_probe(pop @{ $self->{pending_probes} });
-
-    $self->_drain_probes;
 }
 
 
 
-sub add_connection {
-    my ($self) = @_;
-
-    my $connection_id = get_session_token();
-
-    my $connection = Vmprobe::Remote::Connection->new(remote_obj => $self, connection_id => $connection_id);
-
-    $self->{connections}->{$connection_id} = $connection;
-
-    $connection->cmd_ready() if $self->{connection_cmd};
-
-    $self->{on_state_change}->($self);
-}
 
 
 sub shutdown {
@@ -252,21 +283,21 @@ sub shutdown {
 sub _teardown_ssh_master {
     my ($self, $err_msg) = @_;
 
+    $self->set_state('disconnected');
+
     $err_msg //= 'shutdown';
 
     foreach my $connection (values %{ $self->{connections} }) {
         $connection->_teardown($err_msg);
     }
 
+    $self->{num_connections} = 0;
     $self->{connections} = {};
     $self->{idle_connections} = [];
 
-    delete $self->{connection_inited};
-    delete $self->{connection_cmd};
-
     delete $self->{ssh_timer};
-    delete $self->{master_pipe};
-    delete $self->{master_stderr_watcher};
+    delete $self->{ssh_master_pipe};
+    delete $self->{ssh_master_stderr_watcher};
     my $ssh = delete $self->{ssh};
 
     if ($ssh) {
@@ -279,6 +310,16 @@ sub _teardown_ssh_master {
                 undef $ssh;
             }
         };
+    }
+
+    if (!$self->{zombie}) {
+        $self->{reconnection_timer} //= AE::timer $self->{reconnection_interval}, 0, sub {
+            delete $self->{reconnection_timer};
+            $self->_init;
+        };
+
+        # Host might have been restarted/upgraded
+        delete $self->{version_info};
     }
 }
 
@@ -298,20 +339,7 @@ sub _connection_is_disconnected {
 
     delete $self->{connections}->{$connection->{connection_id}};
     $self->{idle_connections} = [ grep { $_ != $connection } @{ $self->{idle_connections} } ];
-
-    if (keys %{ $self->{connections} } == 0) {
-        $self->_teardown_ssh_master;
-
-        if (!$self->{zombie}) {
-            $self->{reconnection_timer} //= AE::timer 4, 0, sub {
-                delete $self->{reconnection_timer};
-                $self->refresh_version_info;
-            };
-        }
-
-        # Host might have been restarted/upgraded
-        delete $self->{version_info};
-    }
+    $self->{num_connections}--;
 
     $self->{on_state_change}->($self);
 }

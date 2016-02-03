@@ -100,6 +100,7 @@ sub _update_polls {
                 });
             } frame_catch {
                 say STDERR "error in probe: $@";
+                $poll->{timer} = AE::timer($poll->{frequency} // 1, 0, $poll->{handler});
             };
         };
 
