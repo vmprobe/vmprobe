@@ -10,6 +10,7 @@ web ui:
   * time-series plotting
   * left-align column contents
   * way to remove notifications like the flame errors
+  * when parent of a tool-tip goes away, tool-tip is stuck there until you hover over something else (ie when you disconnect a remote)
 
 cmd line:
   * output should always be in deterministic order (usually by specified remote order)
