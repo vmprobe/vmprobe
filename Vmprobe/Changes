@@ -1,3 +1,9 @@
+0.1.5  2016-02-03
+  * Compress 'vmprobe raw' output
+  * --sudo and --vmprobe-binary switches
+  * Multiple connections to each remote is supported
+  * Retry connecting to remotes if connections are dropped
+
 0.1.4  2016-01-26
   * Support cache snapshots in GUI
   * Much enhanced memory usage display
