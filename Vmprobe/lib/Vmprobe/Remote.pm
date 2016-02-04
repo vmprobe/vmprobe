@@ -98,7 +98,10 @@ sub refresh_version_info {
             $self->add_version_info($version);
         });
     } frame_catch {
-        say STDERR "error refreshing version info: $@";
+        my $err_msg = "error refreshing version info: $@";
+        say STDERR $err_msg;
+        $self->error_message($err_msg);
+        #$self->_teardown_ssh_master($err_msg);
     };
 }
 
@@ -269,7 +272,10 @@ sub _drain_probes {
 sub shutdown {
     my ($self) = @_;
 
-    warn "remote already shutdown" if $self->{zombie};
+    if ($self->{zombie}) {
+        warn "remote already shutdown";
+        return;
+    }
     $self->{zombie} = 1;
 
     ## Resources just remove the reference to the remote so don't bother sending state change info as we shutdown
@@ -337,9 +343,17 @@ sub _connection_is_idle {
 sub _connection_is_disconnected {
     my ($self, $connection) = @_;
 
-    delete $self->{connections}->{$connection->{connection_id}};
+    if (!delete $self->{connections}->{$connection->{connection_id}}) {
+        warn "connection already deleted";
+        return;
+    }
+
     $self->{idle_connections} = [ grep { $_ != $connection } @{ $self->{idle_connections} } ];
     $self->{num_connections}--;
+
+    if ($self->{num_connections} == 0) {
+        $self->_teardown_ssh_master($self->{last_error_message});
+    }
 
     $self->{on_state_change}->($self);
 }

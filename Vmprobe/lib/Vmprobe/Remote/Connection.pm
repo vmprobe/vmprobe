@@ -69,7 +69,8 @@ sub _open_handle {
                           fh => $fh2,
                           on_error => sub {
                               my ($handle, $fatal, $msg) = @_;
-                              my $err_msg = "connection lost: $msg";
+                              $msg = abbreviate_perl_exception($msg);
+                              my $err_msg = "connection lost: $msg / $ssh_stderr";
                               $self->{remote_obj}->error_message($err_msg);
                               $self->_teardown($err_msg);
                           });
@@ -88,7 +89,10 @@ sub queue_probe {
 sub _teardown {
     my ($self, $err_msg) = @_;
 
-    warn "connection already torn down" if $self->{zombie};
+    if ($self->{zombie}) {
+        warn "connection already torn down";
+        return;
+    }
     $self->{zombie} = 1;
 
     if ($self->{handle}) {
