@@ -1,5 +1,7 @@
 back-end:
   * detect when SSH keys aren't setup, show useful error msg
+  * support wildcard globbing in snapshot paths
+  * normalize snapshot pathnames (ie make absolute, collapse "//", etc)
 
 web ui:
   * bug: CacheSummaryDisplay hover a bit buggy, sometimes throws "Uncaught TypeError: Cannot read property 'num_files' of undefined:
