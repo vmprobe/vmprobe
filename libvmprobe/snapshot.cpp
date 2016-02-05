@@ -12,8 +12,12 @@
 
 namespace vmprobe { namespace cache { namespace snapshot {
 
+builder::builder() : vmprobe::cache::binformat::builder(vmprobe::cache::binformat::typecode::SNAPSHOT_V1) {
+    auto pagesize = vmprobe::pageutils::pagesize();
+    buf += vmprobe::varuint64::encode(pagesize == 4096 ? 0 : pagesize);
+}
 
-builder::builder(std::string path) {
+void builder::crawl(std::string path) {
     vmprobe::cache::mincore_result r;
 
     // FIXME: normalize path (remove ".." "." "//")
@@ -29,8 +33,6 @@ builder::builder(std::string path) {
         elem.filename = (char*) filename.data();
         elem.filename_len = filename.size();
         elem.file_size = f.get_size();
-        elem.resident_pages = r.resident_pages;
-        elem.bf.bucket_size = vmprobe::pageutils::pagesize();
         elem.bf.num_buckets = r.num_pages;
         elem.bf.data = r.bitfield_vec.data();
 
@@ -47,8 +49,6 @@ void builder::add_element(element &elem) {
     tmp += vmprobe::varuint64::encode(elem.filename_len);
     tmp += std::string(elem.filename, elem.filename_len);
     tmp += vmprobe::varuint64::encode(elem.file_size);
-    tmp += vmprobe::varuint64::encode(elem.resident_pages);
-    tmp += vmprobe::varuint64::encode(elem.bf.bucket_size == 4096 ? 0 : elem.bf.bucket_size);
     tmp += vmprobe::varuint64::encode(elem.bf.num_buckets);
 
     buf += vmprobe::varuint64::encode(tmp.size() + elem.bf.data_size());
@@ -58,15 +58,11 @@ void builder::add_element(element &elem) {
 
 
 
-std::runtime_error parser::make_error(std::string msg) {
-    std::string err = std::string("snapshot parse error: ");
 
-    err += msg;
-    err += std::string(" (detected at byte ");
-    err += std::to_string(begin - orig_begin);
-    err += std::string(")");
 
-    return std::runtime_error(err);
+parser::parser(vmprobe::cache::binformat::typecode type, char *ptr, size_t len) : vmprobe::cache::binformat::parser(type, ptr, len) {
+    if (!vmprobe::varuint64::decode(begin, end, snapshot_pagesize)) throw make_error("unable to parse snapshot_pagesize");
+    if (snapshot_pagesize == 0) snapshot_pagesize = 4096;
 }
 
 
@@ -88,8 +84,6 @@ element *parser::next() {
     begin += filename_len;
 
     if (!vmprobe::varuint64::decode(begin, elem_end, curr_elem.file_size)) throw make_error("bad file size");
-    if (!vmprobe::varuint64::decode(begin, elem_end, curr_elem.resident_pages)) throw make_error("bad resident pages");
-    if (!vmprobe::varuint64::decode(begin, elem_end, curr_elem.bf.bucket_size)) throw make_error("bad bucket size");
     if (!vmprobe::varuint64::decode(begin, elem_end, curr_elem.bf.num_buckets)) throw make_error("bad num buckets");
 
     if (begin+curr_elem.bf.data_size() > elem_end || begin+curr_elem.bf.data_size() < begin) throw make_error("declared num_buckets extends beyond buffer");
@@ -113,7 +107,7 @@ void parser::process(parser_element_handler_cb cb) {
 }
 
 
-static void restore_residency_state(vmprobe::cache::file &file, vmprobe::cache::bitfield &bf) {
+static void restore_residency_state(uint64_t bucket_size, vmprobe::cache::file &file, vmprobe::cache::bitfield &bf) {
     size_t range_start = 0;
     size_t range_end = 0;
     int range_state = -1;
@@ -133,7 +127,7 @@ static void restore_residency_state(vmprobe::cache::file &file, vmprobe::cache::
             range_state = bit_state;
         }
 
-        range_end += bf.bucket_size ? bf.bucket_size : 4096;
+        range_end += bucket_size;
 
         if (range_end > mem_len) {
             range_end = mem_len;
@@ -150,12 +144,12 @@ static void restore_residency_state(vmprobe::cache::file &file, vmprobe::cache::
 }
 
 void restore(char *ptr, size_t len) {
-    parser p(ptr, len);
+    parser p(vmprobe::cache::binformat::typecode::SNAPSHOT_V1, ptr, len);
 
     p.process([&](element &elem) {
         std::string filename(elem.filename, elem.filename_len);
         vmprobe::cache::file f(filename);
-        restore_residency_state(f, elem.bf);
+        restore_residency_state(p.snapshot_pagesize, f, elem.bf);
     });
 }
 
