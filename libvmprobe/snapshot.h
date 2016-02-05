@@ -45,13 +45,12 @@ class builder : protected vmprobe::cache::binformat::builder {
     builder();
 
     void crawl(std::string path);
+    void apply_delta(char *snapshot_ptr, size_t snapshot_len, char *delta_ptr, size_t delta_len);
 
   private:
     void add_element(element &elem);
 };
 
-
-void mincore_vector_to_bitfield(std::vector<uint8_t> &mincore_vector, std::vector<uint8_t> &bf);
 
 
 
@@ -60,7 +59,7 @@ using parser_element_handler_cb = std::function<void(element &elem)>;
 
 class parser : protected vmprobe::cache::binformat::parser {
   public:
-    parser(vmprobe::cache::binformat::typecode type, char *ptr, size_t len);
+    parser(char *ptr, size_t len);
 
     void process(parser_element_handler_cb cb);
 

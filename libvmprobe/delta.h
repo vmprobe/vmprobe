@@ -33,4 +33,52 @@ N>=0 records:
 */
 
 
+
+class patch {
+  public:
+    uint64_t offset;
+    vmprobe::cache::bitfield bf;
+};
+
+class element {
+  public:
+    char *filename;
+    size_t filename_len;
+    uint64_t file_size;
+    std::vector<patch>;
+};
+
+
+
+class builder : protected vmprobe::cache::binformat::builder {
+  public:
+    builder(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
+
+  private:
+    void add_element(element &elem);
+};
+
+
+
+
+
+using parser_element_handler_cb = std::function<void(element &elem)>;
+
+
+class parser : protected vmprobe::cache::binformat::parser {
+  public:
+    parser(char *ptr, size_t len);
+
+    void process(parser_element_handler_cb cb);
+
+  private:
+    element *next();
+
+    std::string curr_filename;
+    element curr_elem;
+};
+
+
+
+
 }}}

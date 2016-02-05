@@ -80,7 +80,7 @@ void builder::compress() {
 
 
 void summarize(char *snapshot_ptr, size_t snapshot_len, std::vector<builder> &summaries) {
-    parser p(vmprobe::cache::binformat::typecode::SNAPSHOT_V1, snapshot_ptr, snapshot_len);
+    vmprobe::cache::snapshot::parser p(snapshot_ptr, snapshot_len);
 
     p.process([&](vmprobe::cache::snapshot::element &elem) {
         for (auto &summary : summaries) {

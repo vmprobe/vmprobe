@@ -60,7 +60,7 @@ void builder::add_element(element &elem) {
 
 
 
-parser::parser(vmprobe::cache::binformat::typecode type, char *ptr, size_t len) : vmprobe::cache::binformat::parser(type, ptr, len) {
+parser::parser(char *ptr, size_t len) : vmprobe::cache::binformat::parser(vmprobe::cache::binformat::typecode::SNAPSHOT_V1, ptr, len) {
     if (!vmprobe::varuint64::decode(begin, end, snapshot_pagesize)) throw make_error("unable to parse snapshot_pagesize");
     if (snapshot_pagesize == 0) snapshot_pagesize = 4096;
 }
@@ -144,7 +144,7 @@ static void restore_residency_state(uint64_t bucket_size, vmprobe::cache::file &
 }
 
 void restore(char *ptr, size_t len) {
-    parser p(vmprobe::cache::binformat::typecode::SNAPSHOT_V1, ptr, len);
+    parser p(ptr, len);
 
     p.process([&](element &elem) {
         std::string filename(elem.filename, elem.filename_len);
