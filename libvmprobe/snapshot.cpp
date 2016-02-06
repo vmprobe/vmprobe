@@ -75,13 +75,13 @@ element *parser::next() {
     uint64_t elem_len;
     if (!vmprobe::varuint64::decode(begin, end, elem_len)) throw make_error("bad elem length");
 
+    if (elem_len > (uint64_t)(end - begin)) throw make_error("declared elem length extends beyond buffer");
     char *elem_end = begin + elem_len;
-    if (elem_end > end || elem_end < begin) throw make_error("declared elem length extends beyond buffer");
 
     uint64_t filename_len;
     if (!vmprobe::varuint64::decode(begin, elem_end, filename_len)) throw make_error("bad filename length");
 
-    if (begin+filename_len > elem_end || begin+filename_len < begin) throw make_error("declared filename length extends beyond buffer");
+    if (filename_len > (uint64_t)(elem_end - begin)) throw make_error("declared filename length extends beyond buffer");
     curr_elem.filename = begin;
     curr_elem.filename_len = (size_t)filename_len;
     begin += filename_len;
@@ -89,7 +89,7 @@ element *parser::next() {
     if (!vmprobe::varuint64::decode(begin, elem_end, curr_elem.file_size)) throw make_error("bad file size");
     if (!vmprobe::varuint64::decode(begin, elem_end, curr_elem.bf.num_buckets)) throw make_error("bad num buckets");
 
-    if (begin+curr_elem.bf.data_size() > elem_end || begin+curr_elem.bf.data_size() < begin) throw make_error("declared num_buckets extends beyond buffer");
+    if (curr_elem.bf.data_size() > (uint64_t)(elem_end - begin)) throw make_error("declared num_buckets extends beyond buffer");
     curr_elem.bf.data = (uint8_t *)begin;
     begin += curr_elem.bf.data_size();
 
