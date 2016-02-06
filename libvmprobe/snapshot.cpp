@@ -15,6 +15,7 @@ namespace vmprobe { namespace cache { namespace snapshot {
 builder::builder() : vmprobe::cache::binformat::builder(vmprobe::cache::binformat::typecode::SNAPSHOT_V1) {
     auto pagesize = vmprobe::pageutils::pagesize();
     buf += vmprobe::varuint64::encode(pagesize == 4096 ? 0 : pagesize);
+    buf += vmprobe::varuint64::encode(0); // flags are 0 for now
 }
 
 void builder::crawl(std::string path) {
@@ -63,6 +64,8 @@ void builder::add_element(element &elem) {
 parser::parser(char *ptr, size_t len) : vmprobe::cache::binformat::parser(vmprobe::cache::binformat::typecode::SNAPSHOT_V1, ptr, len) {
     if (!vmprobe::varuint64::decode(begin, end, snapshot_pagesize)) throw make_error("unable to parse snapshot_pagesize");
     if (snapshot_pagesize == 0) snapshot_pagesize = 4096;
+
+    if (!vmprobe::varuint64::decode(begin, end, flags)) throw make_error("unable to parse flags");
 }
 
 

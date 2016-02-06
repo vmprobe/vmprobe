@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <stdexcept>
 #include <string>
 
@@ -8,6 +10,7 @@ namespace vmprobe { namespace cache { namespace binformat {
 
 
 builder::builder(typecode type) {
+    buf += "VMP";
     buf += vmprobe::varuint64::encode((uint64_t)type);
 }
 
@@ -16,13 +19,16 @@ parser::parser(typecode type, char *ptr, size_t len) {
     begin = orig_begin = ptr;
     end = ptr + len;
 
+    if (end - begin < 3 || memcmp(begin, "VMP", 3) != 0) throw make_error("input does not begin with magic VMP bytes");
+    begin += 3;
+
     uint64_t decoded_type;
     if (!vmprobe::varuint64::decode(begin, end, decoded_type)) throw make_error("unable to parse binformat type");
 
     if (decoded_type != (uint64_t)type) {
         throw make_error(std::string("unexpected binformat type, wanted ") +
                          std::to_string((uint64_t)type) +
-                         std::string("got: ") +
+                         std::string(", got: ") +
                          std::to_string(decoded_type));
     }
 }

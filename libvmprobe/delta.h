@@ -16,9 +16,11 @@ namespace vmprobe { namespace cache { namespace delta {
 
 DELTA_V1:
 
+"VMP" magic bytes
 VI: type
 N>=0 records:
   VI: record size in bytes, not including this size
+  VI: flags
   VI: filename size in bytes
   filename
   VI: file size in bytes

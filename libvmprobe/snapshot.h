@@ -16,10 +16,12 @@ namespace vmprobe { namespace cache { namespace snapshot {
 
 SNAPSHOT_V1:
 
+"VMP" magic bytes
 VI: type
 VI: snapshot pagesize in bytes (0 special-cased as 4096)
 N>=0 records:
   VI: record size in bytes, not including this size
+  VI: flags
   VI: filename size in bytes
   filename
   VI: file size in bytes
@@ -40,7 +42,7 @@ class element {
 };
 
 
-class builder : protected vmprobe::cache::binformat::builder {
+class builder : public vmprobe::cache::binformat::builder {
   public:
     builder();
 
@@ -57,13 +59,14 @@ class builder : protected vmprobe::cache::binformat::builder {
 using parser_element_handler_cb = std::function<void(element &elem)>;
 
 
-class parser : protected vmprobe::cache::binformat::parser {
+class parser : public vmprobe::cache::binformat::parser {
   public:
     parser(char *ptr, size_t len);
 
     void process(parser_element_handler_cb cb);
 
     uint64_t snapshot_pagesize;
+    uint64_t flags;
 
   private:
     element *next();
