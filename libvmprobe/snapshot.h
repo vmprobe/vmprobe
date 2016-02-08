@@ -12,32 +12,46 @@
 namespace vmprobe { namespace cache { namespace snapshot {
 
 
+const static uint64_t SNAPSHOT_SPARSE = 1; // normal snapshots fully list every file, sparse snapshots only list files in memory
+const static uint64_t SNAPSHOT_DELTA = 2;  // whether this snapshot's bitfield should be interpreted as a delta or not
+
+const static uint64_t ELEMENT_DELETED = 1; // this file was deleted, not just evicted (also used for eviction in sparse mode)
+
+
 /*
 
 SNAPSHOT_V1:
 
-"VMP" magic bytes
-VI: type
-VI: snapshot pagesize in bytes (0 special-cased as 4096)
-N>=0 records:
-  VI: record size in bytes, not including this size
-  VI: flags
-  VI: filename size in bytes
-  filename
-  VI: file size in bytes
-  VI: bitfield buckets
-  bitfield (0 = non-resident, 1 = resident)
+binformat header:
+  "VMP" magic bytes
+  VI: type
+snapshot data:
+  VI: pagesize in bytes (0 special-cased as 4096)
+  VI: snapshot flags
+  N>=0 records:
+    VI: record size in bytes, not including this size
+    VI: record flags
+    VI: filename size in bytes
+    filename
+    VI: file size in bytes
+    VI: bitfield buckets (in bits)
+    bitfield (0 = non-resident, 1 = resident)
+
+(VI == BER encoded uint64_t)
 
 */
 
 
 
 
+// transient data-structure used internally during parsing/building
+// doesn't own any of the data it points to
 class element {
   public:
-    char *filename;
-    size_t filename_len;
-    uint64_t file_size;
+    uint64_t flags = 0;
+    char *filename = nullptr;
+    size_t filename_len = 0;
+    uint64_t file_size = 0;
     vmprobe::cache::bitfield bf;
 };
 
@@ -46,10 +60,14 @@ class builder : public vmprobe::cache::binformat::builder {
   public:
     builder();
 
-    void crawl(std::string path);
-    void apply_delta(char *snapshot_ptr, size_t snapshot_len, char *delta_ptr, size_t delta_len);
+    void crawl(std::string path, int sparse);
+
+    void delta(std::string &before, std::string &after);
+    void delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
 
   private:
+    void add_element_deleted_stub(element &elem);
+    void add_element_xor_diff(element &elem_before, element &elem_after);
     void add_element(element &elem);
 };
 
@@ -64,12 +82,12 @@ class parser : public vmprobe::cache::binformat::parser {
     parser(char *ptr, size_t len);
 
     void process(parser_element_handler_cb cb);
+    element *next();
 
-    uint64_t snapshot_pagesize;
+    uint64_t pagesize;
     uint64_t flags;
 
   private:
-    element *next();
 
     std::string curr_filename;
     element curr_elem;

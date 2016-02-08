@@ -5,9 +5,8 @@
 
 namespace vmprobe { namespace cache { namespace binformat {
 
-enum class typecode {
-    SNAPSHOT_V1 = 10,
-    DELTA_V1 = 20,
+enum class typecode : uint64_t {
+    SNAPSHOT_V1 = 0,
 };
 
 

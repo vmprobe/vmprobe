@@ -5,7 +5,7 @@ CXXFLAGS = -I.. -L.. $(STD) $(OPT) $(W) -fPIC $(XCXXFLAGS)
 LDLIBS   = -lvmprobe
 LDFLAGS  = -Wl,-rpath,..
 
-TESTS    = take-snapshot parse-snapshot
+TESTS    = take-snapshot parse-snapshot delta-snapshots
 
 .PHONY: all clean
 

@@ -17,10 +17,15 @@ int main(int argc, char **argv) {
     try {
         vmprobe::cache::snapshot::parser p((char*)input.data(), input.size());
 
+        std::cout << "PAGESIZE: " << p.pagesize << std::endl;
+        std::cout << "SNAPSHOT FLAGS: " << p.flags << std::endl;
+        std::cout << std::endl;
+
         p.process([&](vmprobe::cache::snapshot::element &elem) {
             std::string filename(elem.filename, elem.filename_len);
 
             std::cout << filename << std::endl;
+            std::cout << "  RECORD FLAGS: " << elem.flags << std::endl;
             std::cout << "  SIZE: " << elem.file_size << std::endl;
 
             std::cout << "  BF: ";
@@ -32,8 +37,6 @@ int main(int argc, char **argv) {
         });
 
         std::cout << std::endl;
-        std::cout << "PAGESIZE: " << p.snapshot_pagesize << std::endl;
-        std::cout << "FLAGS: " << p.flags << std::endl;
     } catch(std::runtime_error &e) {
         std::cerr << "exception: " << e.what() << std::endl;
         return 1;
