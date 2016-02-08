@@ -142,7 +142,7 @@ sub abbreviate_perl_exception {
 sub sereal_encode {
     state $encoder = do {
         require Sereal::Encoder;
-        Sereal::Encoder->new({ compress => 1, })
+        Sereal::Encoder->new({ compress => Sereal::Encoder::SRL_ZLIB, })
     };
 
     return $encoder->encode($_[0]);
