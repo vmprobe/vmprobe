@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include "snapshot.h"
+#include "summary.h"
 
 #include <stdexcept>
 
@@ -34,7 +35,9 @@ take(path_sv)
         std::string path(path_p, path_len);
 
         try {
-            vmprobe::cache::snapshot::builder b(path);
+            vmprobe::cache::snapshot::builder b;
+
+            b.crawl(path, 0);
 
             output = newSVpvn(b.buf.data(), b.buf.size());
         } catch(std::runtime_error &e) {
@@ -79,12 +82,12 @@ summarize(snapshot_sv, buckets)
         results = (AV *) sv_2mortal ((SV *) newAV ());
 
     CODE:
-        std::vector<vmprobe::cache::snapshot::summary> s;
+        std::vector<vmprobe::cache::snapshot::summary::builder> s;
 
         s.emplace_back(std::string(""), buckets);
 
         try {
-            vmprobe::cache::snapshot::summarize(snapshot_p, snapshot_len, s);
+            vmprobe::cache::snapshot::summary::summarize(snapshot_p, snapshot_len, s);
         } catch(std::runtime_error &e) {
             croak(e.what());
         }
@@ -100,50 +103,6 @@ summarize(snapshot_sv, buckets)
             hv_store(rh, "start_page_offset", 17, newSVnv(bucket.start_page_offset), 0);
 
             av_push(results, newRV((SV *)rh)); 
-        }
-
-        RETVAL = newRV((SV *)results);
-    OUTPUT:
-        RETVAL
-
-
-
-SV *
-diff(snapshot_a_sv, snapshot_b_sv)
-        SV *snapshot_a_sv
-        SV *snapshot_b_sv
-    INIT:
-        char *snapshot_a_p;
-        size_t snapshot_a_len;
-        char *snapshot_b_p;
-        size_t snapshot_b_len;
-
-        snapshot_a_len = SvCUR(snapshot_a_sv);
-        snapshot_a_p = SvPV(snapshot_a_sv, snapshot_a_len);
-
-        snapshot_b_len = SvCUR(snapshot_b_sv);
-        snapshot_b_p = SvPV(snapshot_b_sv, snapshot_b_len);
-
-        AV *results;
-        results = (AV *) sv_2mortal ((SV *) newAV ());
-
-    CODE:
-        std::vector<vmprobe::cache::snapshot::diff> diffs;
-
-        try {
-            vmprobe::cache::snapshot::diff_snapshots(snapshot_a_p, snapshot_a_len, snapshot_b_p, snapshot_b_len, diffs);
-        } catch(std::runtime_error &e) {
-            croak(e.what());
-        }
-
-        for (auto &d : diffs) {
-            HV *rh = (HV *) sv_2mortal ((SV *) newHV());
-
-            hv_store(rh, "filename", 8, newSVpvn(d.filename.c_str(), d.filename.size()), 0);
-            hv_store(rh, "touched", 7, newSVnv(d.touched), 0);
-            hv_store(rh, "evicted", 7, newSVnv(d.evicted), 0);
-
-            av_push(results, newRV((SV *)rh));
         }
 
         RETVAL = newRV((SV *)results);

@@ -29,6 +29,7 @@ class crawler {
     std::vector<std::string> warnings;
 
   private:
+    void _crawl(std::string &path);
     void process_file(std::string &path_std_string, struct ::stat &sb);
     void warning(const char *format, ...);
     void fatal(const char *format, ...);

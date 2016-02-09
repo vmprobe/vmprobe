@@ -16,6 +16,7 @@
 #include <dirent.h>
 
 #include "crawler.h"
+#include "path.h"
 
 
 namespace vmprobe {
@@ -69,7 +70,7 @@ void crawler::increment_nofile_rlimit() {
 
 
 
-void crawler::crawl(std::string &path_std_string) {
+void crawler::_crawl(std::string &path_std_string) {
     const char *path = path_std_string.c_str();
     struct ::stat sb;
 
@@ -138,6 +139,12 @@ void crawler::crawl(std::string &path_std_string) {
     } else {
         warning("skipping non-regular file: %s", path);
     }
+}
+
+void crawler::crawl(std::string &path) {
+    std::string normalized_path = vmprobe::path::normalize(path);
+
+    _crawl(normalized_path);
 }
 
 }

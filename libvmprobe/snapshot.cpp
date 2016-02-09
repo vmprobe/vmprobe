@@ -3,7 +3,6 @@
 
 #include <fcntl.h>
 
-#include "path.h"
 #include "pageutils.h"
 #include "varuint64.h"
 #include "snapshot.h"
@@ -23,8 +22,6 @@ void builder::crawl(std::string path, int sparse) {
 
     if (sparse) flags |= SNAPSHOT_SPARSE;
     buf += vmprobe::varuint64::encode(flags);
-
-    path = vmprobe::path::normalize(path);
 
     vmprobe::cache::mincore_result r;
 
