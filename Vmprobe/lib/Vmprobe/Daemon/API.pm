@@ -4,16 +4,13 @@ use common::sense;
 
 use LMDB_File;
 use Twiggy::Server;
-use Plack::Request;
-use Plack::Response;
 use Plack::Middleware::ContentLength;
 use Plack::Middleware::Deflater;
-use JSON::XS;
 
-use Vmprobe::Dispatcher;
 use Vmprobe::Util;
-
 use Vmprobe::Daemon::Config;
+use Vmprobe::Daemon::Router;
+use Vmprobe::Daemon::Entity::Remote;
 
 
 
@@ -22,8 +19,6 @@ sub new {
 
     my $self = {};
     bless $self, $class;
-
-    $self->{dispatcher} = Vmprobe::Dispatcher->new();
 
     $self->open_db();
     $self->start_service();
@@ -42,18 +37,20 @@ sub open_db {
         mkdir $db_dir || die "couldn't mkdir($db_dir): $!";
     }
 
-    $self->{lmdb_env} = LMDB::Env->new($db_dir,
-                            {
-                                mapsize => 100 * 1024 * 1024 * 1024,
-                                maxdbs => 32,
-                                mode   => 0600,
-                            });
+    $self->{lmdb} = LMDB::Env->new($db_dir,
+                        {
+                            mapsize => 100 * 1024 * 1024 * 1024,
+                            maxdbs => 32,
+                            mode   => 0600,
+                        });
 }
 
 
 
 sub start_service {
-    my $app = \&api_plack_handler;
+    my ($self) = @_;
+
+    my $app = $self->api_plack_handler();
 
     $app = Plack::Middleware::ContentLength->wrap($app);
 
@@ -74,12 +71,47 @@ sub start_service {
 }
 
 
+
+=pod
+/remote (GET, POST)
+/remote/:remoteIdOrName (GET, PUT, DELETE)
+
+/cache/monitor (GET, POST)
+/cache/monitor/:monitor (GET, PUT, DELETE)
+
+/cache/snapshot (GET, POST)
+/cache/snapshot/:snapshotId (GET, DELETE)
+/cache/snapshot/:snapshotId/restore (POST)
+
+/cache/standby (GET, POST)
+/cache/standby/:standbyId (GET, PUT, DELETE)
+=cut
+
+
 sub api_plack_handler {
-    my $env = shift;
+    my ($self) = @_;
 
-    my $req = Plack::Request->new($env);
+    my $router = Vmprobe::Daemon::Router->new(lmdb => $self->{lmdb});
 
-    return [200, ["Content-Type" => "application/json"], [encode_json({ok=>1})]];
+    $router->mount({
+        entity => Vmprobe::Daemon::Entity::Remote->new(),
+        routes => {
+            '/remote' => {
+                GET => 'get_all_remotes',
+                POST => 'create_new_remote_anon',
+            },
+            '/remote/:remoteId' => {
+                GET => 'get_remote',
+                PUT => 'update_remote',
+                DELETE => 'remove_remote',
+            },
+        },
+    });
+
+    return sub {
+        my $env = shift;
+        return $router->route($env);
+    };
 }
 
 
