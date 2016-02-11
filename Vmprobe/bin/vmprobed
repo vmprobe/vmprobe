@@ -1,0 +1,35 @@
+#!/usr/bin/env perl
+
+use common::sense;
+
+use AnyEvent::Loop; # FIXME: EV not playing nice with Net:OpenSSH (not detecting child exits?)
+#use EV;
+use AnyEvent;
+use Getopt::Long;
+
+use Vmprobe::Daemon::Config;
+use Vmprobe::Daemon::API;
+
+
+
+
+my $config_file = '/etc/vmprobed/vmprobed.conf';
+
+GetOptions("config|c=s" => \$config_file)
+    || die "error in command-line arguments";
+
+Vmprobe::Daemon::Config::load_config($config_file);
+
+
+
+
+
+
+
+my $api;
+
+if (config->{api}) {
+    $api = Vmprobe::Daemon::API->new;
+}
+
+AE::cv->recv;
