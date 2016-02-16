@@ -29,6 +29,7 @@ sub new {
     $self->{max_connections} = $args{max_connections} // 3;
     $self->{reconnection_interval} = $args{reconnection_interval} // 5;
     $self->{collect_version_info} = $args{collect_version_info} // 1;
+    $self->{ssh_to_localhost} = $args{ssh_to_localhost} // 0;
 
     ## Internals
 
@@ -118,7 +119,7 @@ sub _connect_ssh {
 
     return if $self->{state} ne 'disconnected';
 
-    if ($self->{host} eq 'localhost') {
+    if (!$self->{ssh_to_localhost} && $self->{host} eq 'localhost') {
         $self->set_state('ok');
         $self->_drain_probes;
         return;
@@ -169,7 +170,7 @@ sub _get_handle_cmd {
     my $vmprobe_binary;
 
     $vmprobe_binary //= $Vmprobe::Remote::global_params->{vmprobe_binary};
-    $vmprobe_binary //= $0 if $self->{host} eq 'localhost';
+    $vmprobe_binary //= $0 if !$self->{ssh_to_localhost} && $self->{host} eq 'localhost';
     $vmprobe_binary //= 'vmprobe';
 
     my $cmd = [ $vmprobe_binary, 'raw', ];
@@ -177,7 +178,7 @@ sub _get_handle_cmd {
     unshift @$cmd, qw(sudo -p -n --)
         if $Vmprobe::Remote::global_params->{sudo};
 
-    if ($self->{host} eq 'localhost') {
+    if (!$self->{ssh_to_localhost} && $self->{host} eq 'localhost') {
         return $cmd;
     }
 
