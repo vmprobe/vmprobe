@@ -4,58 +4,129 @@ use common::sense;
 
 use parent 'Vmprobe::Daemon::Entity';
 
-use Vmprobe::Util;
-
 use LMDB_File qw(:flags :cursor_op);
 
+use Vmprobe::Util;
+use Vmprobe::Remote;
 
-sub get_all_remotes {
-    my ($self, $c) = @_;
 
-    my $txn = $c->lmdb->BeginTxn();
+
+sub init {
+    my ($self) = @_;
+
+    my $txn = $self->lmdb_env->BeginTxn();
 
     my $remote_db = $txn->OpenDB({
                         dbname => 'remote',
                         flags => MDB_CREATE,
                     });
 
-    my $remotes = [];
+    $self->{remotes_by_id} = {};
+    $self->{remotes_by_host} = {};
+    $self->{remote_objs_by_id} = {};
 
-    $c->foreach_db($remote_db, sub {
+    $self->foreach_db($remote_db, sub {
         my ($key, $value) = @_;
 
         next if $key !~ /^\d+$/;
 
-        push @$remotes, sereal_decode($value);
+        $self->load_remote(sereal_decode($value));
     });
+
+    $txn->commit;
+}
+
+
+
+sub load_remote {
+    my ($self, $remote) = @_;
+
+    $self->{remotes_by_id}->{$remote->{id}} = $remote;
+    $self->{remotes_by_host}->{$remote->{host}} = $remote;
+
+    $self->{remote_objs_by_id}->{$remote->{id}} =
+        Vmprobe::Remote->new(
+            ssh_to_localhost => 1,
+            host => $remote->{host},
+            on_state_change => sub {},
+        );
+}
+
+
+sub get_remote_by_id {
+    my ($self, $id) = @_;
+
+    my $remote = $self->{remotes_by_id}->{$id};
+
+    return if !$remote;
+
+    my $remote_obj = $self->{remote_objs_by_id}->{$id};
+
+    return {
+        %$remote,
+
+        state => $remote_obj->get_state(),
+        num_connections => $remote_obj->get_num_connections(),
+
+        $remote_obj->{last_error_message} ?
+          (error_message => $remote_obj->{last_error_message}) : (),
+        $remote_obj->{version_info} ?
+          (version_info => $remote_obj->{version_info}) : (),
+    };
+}
+
+
+
+sub ENTRY_get_all_remotes {
+    my ($self, $c) = @_;
+
+    my $remotes = [];
+
+    foreach my $id (keys %{ $self->{remotes_by_id} }) {
+        push @$remotes, $self->get_remote_by_id($id);
+    }
 
     return $remotes;
 }
 
 
-sub create_new_remote_anon {
+sub ENTRY_get_remote {
+    my ($self, $c) = @_;
+
+    my $id = $c->url_args->{remoteId};
+
+    my $remote = $self->get_remote_by_id($id);
+
+    return $c->err_not_found('no such remote id') if !$remote;
+
+    return $remote;
+}
+
+
+sub ENTRY_create_new_remote_anon {
     my ($self, $c) = @_;
 
     my $remote = {};
 
     $remote->{host} = delete $c->params->{host} || return $c->err_bad_request("need to specify host");
-    $remote->{name} = delete $c->params->{name} || return $c->err_bad_request("need to specify name");
-   
+    $remote->{host} = lc($remote->{host});
+    return $c->err_bad_request("remote with host $remote->{host} already exists")
+        if exists $self->{remotes_by_host}->{$remote->{host}};
+
     return $c->err_bad_request("unknown parameters: " . join(', ', keys %{ $c->params })) if keys %{ $c->params };
 
 
-    my $txn = $c->lmdb->BeginTxn();
+    my $txn = $self->lmdb_env->BeginTxn();
 
-    my $remote_db = $txn->OpenDB({
-                        dbname => 'remote',
-                        flags => MDB_CREATE,
-                    });
+    my $remote_db = $txn->OpenDB({ dbname => 'remote', });
 
     $remote->{id} = $remote_db->get('next') || 1;
 
     $remote_db->put($remote->{id}, sereal_encode($remote));
 
     $remote_db->put('next', $remote->{id} + 1);
+
+    $self->load_remote($remote);
 
     $txn->commit;
 

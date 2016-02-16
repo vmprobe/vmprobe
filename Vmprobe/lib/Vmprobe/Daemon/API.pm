@@ -101,10 +101,10 @@ sub start_service {
 sub api_plack_handler {
     my ($self) = @_;
 
-    my $router = Vmprobe::Daemon::Router->new(lmdb => $self->{lmdb});
+    my $router = Vmprobe::Daemon::Router->new;
 
     $router->mount({
-        entity => Vmprobe::Daemon::Entity::Remote->new(),
+        entity => Vmprobe::Daemon::Entity::Remote->new(api => $self),
         routes => {
             '/remote' => {
                 GET => 'get_all_remotes',
@@ -113,7 +113,7 @@ sub api_plack_handler {
             '/remote/:remoteId' => {
                 GET => 'get_remote',
                 PUT => 'update_remote',
-                DELETE => 'remove_remote',
+                DELETE => 'delete_remote',
             },
         },
     });

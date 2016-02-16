@@ -63,7 +63,7 @@ sub route {
     $self->_compile() if !exists $self->{re};
 
     if ($path !~ $self->{re}) {
-        return [404, ["Content-Type" => "application/json"], ['{}']];
+        return $self->error(404, 'resource not found');
     }
 
     my $url_args = \%+;
@@ -74,7 +74,7 @@ sub route {
     my $method = $spec->{methods}->{$http_method};
 
     if (!defined $method) {
-        return [405, ["Content-Type" => "application/json"], ['{}']];
+        return $self->error(405, "method '$http_method' not supported on resource");
     }
 
     my $req = Plack::Request->new($env);
@@ -92,7 +92,7 @@ sub route {
         };
 
         if ($@) {
-            return [400, ["Content-Type" => "text/plain"], ["json decode failed: $@"]];
+            return $self->error(400, "failed to parse JSON body: $@");
         }
     } else {
         $params = $req->body_parameters->as_hashref_mixed;
@@ -103,8 +103,9 @@ sub route {
         res => $res,
         url_args => $url_args,
         params => $params,
-        lmdb => $self->{lmdb},
     );
+
+    $method = "ENTRY_$method";
 
     my $content = $spec->{entity}->$method($c);
 
@@ -116,6 +117,14 @@ sub route {
     }
 
     return $res->finalize;
+}
+
+
+
+sub error {
+    my ($self, $status, $msg) = @_;
+
+    return [$status, ["Content-Type" => "application/json"], [encode_json({ error => $msg, })]];
 }
 
 
