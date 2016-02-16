@@ -31,18 +31,28 @@ sub new {
 sub open_db {
     my ($self) = @_;
 
+    if (!-e config->{var_dir}) {
+        die "specified var directory does not exist: " . config->{var_dir};
+    }
+
     my $db_dir = config->{var_dir} . "/db";
 
     if (!-e $db_dir) {
-        mkdir $db_dir || die "couldn't mkdir($db_dir): $!";
+        mkdir($db_dir) || die "couldn't mkdir($db_dir): $!";
     }
 
-    $self->{lmdb} = LMDB::Env->new($db_dir,
-                        {
-                            mapsize => 100 * 1024 * 1024 * 1024,
-                            maxdbs => 32,
-                            mode   => 0600,
-                        });
+    eval {
+        $self->{lmdb} = LMDB::Env->new($db_dir,
+                            {
+                                mapsize => 100 * 1024 * 1024 * 1024,
+                                maxdbs => 32,
+                                mode   => 0600,
+                            });
+    };
+
+    if ($@) {
+        die "error creating LMDB environment: $@";
+    }
 }
 
 
