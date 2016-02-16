@@ -22,13 +22,13 @@ sub init {
                     });
 
     $self->{remotes_by_id} = {};
-    $self->{remotes_by_host} = {};
+    $self->{remote_ids_by_host} = {};
     $self->{remote_objs_by_id} = {};
 
     $self->foreach_db($remote_db, sub {
         my ($key, $value) = @_;
 
-        next if $key !~ /^\d+$/;
+        return if $key !~ /^\d+$/;
 
         $self->load_remote(sereal_decode($value));
     });
@@ -41,15 +41,30 @@ sub init {
 sub load_remote {
     my ($self, $remote) = @_;
 
-    $self->{remotes_by_id}->{$remote->{id}} = $remote;
-    $self->{remotes_by_host}->{$remote->{host}} = $remote;
+    my $id = $remote->{id};
 
-    $self->{remote_objs_by_id}->{$remote->{id}} =
+    $self->{remotes_by_id}->{$id} = $remote;
+    $self->{remote_ids_by_host}->{$remote->{host}} = $id;
+
+    $self->{remote_objs_by_id}->{$id} =
         Vmprobe::Remote->new(
             ssh_to_localhost => 1,
             host => $remote->{host},
             on_state_change => sub {},
         );
+}
+
+
+sub unload_remote {
+    my ($self, $remote) = @_;
+
+    my $id = $remote->{id};
+
+    delete $self->{remotes_by_id}->{$id};
+    delete $self->{remote_ids_by_host}->{$remote->{host}};
+
+    my $remote_obj = delete $self->{remote_objs_by_id}->{$id};
+    $remote_obj->shutdown;
 }
 
 
@@ -94,9 +109,7 @@ sub ENTRY_get_remote {
     my ($self, $c) = @_;
 
     my $id = $c->url_args->{remoteId};
-
     my $remote = $self->get_remote_by_id($id);
-
     return $c->err_not_found('no such remote id') if !$remote;
 
     return $remote;
@@ -111,7 +124,7 @@ sub ENTRY_create_new_remote_anon {
     $remote->{host} = delete $c->params->{host} || return $c->err_bad_request("need to specify host");
     $remote->{host} = lc($remote->{host});
     return $c->err_bad_request("remote with host $remote->{host} already exists")
-        if exists $self->{remotes_by_host}->{$remote->{host}};
+        if exists $self->{remote_ids_by_host}->{$remote->{host}};
 
     return $c->err_bad_request("unknown parameters: " . join(', ', keys %{ $c->params })) if keys %{ $c->params };
 
@@ -131,6 +144,27 @@ sub ENTRY_create_new_remote_anon {
     $txn->commit;
 
     return $remote;
+}
+
+
+sub ENTRY_delete_remote {
+    my ($self, $c) = @_;
+
+    my $id = $c->url_args->{remoteId};
+    my $remote = $self->get_remote_by_id($id);
+    return $c->err_not_found('no such remote id') if !$remote;
+
+    my $txn = $self->lmdb_env->BeginTxn();
+
+    my $remote_db = $txn->OpenDB({ dbname => 'remote', });
+
+    $remote_db->del($id);
+
+    $self->unload_remote($remote);
+
+    $txn->commit;
+
+    return {};
 }
 
 
