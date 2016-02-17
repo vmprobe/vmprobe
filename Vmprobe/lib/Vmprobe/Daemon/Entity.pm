@@ -22,6 +22,16 @@ sub new {
 sub init {}
 
 
+sub get_remote {
+    my ($self, $id) = @_;
+
+    my $remote = $self->{api}->{entities}->{'remote'}->{remote_objs_by_id}->{$id};
+
+    die "no such remoteId '$id'" if !defined $remote;
+
+    return $remote;
+}
+
 sub lmdb_env {
     my ($self) = @_;
 

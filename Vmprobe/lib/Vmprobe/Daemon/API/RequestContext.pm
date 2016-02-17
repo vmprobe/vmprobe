@@ -45,4 +45,20 @@ sub err_not_found {
 }
 
 
+
+sub err_unknown_params {
+    my ($self) = @_;
+
+    return $self->err_bad_request("unknown parameters: " . join(', ', keys %{ $self->{params} }))
+}
+
+sub is_params_left {
+    my ($self) = @_;
+
+    return !!(keys %{ $self->{params} });
+}
+
+
+
+
 1;

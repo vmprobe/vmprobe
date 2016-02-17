@@ -105,18 +105,33 @@ sub route {
         params => $params,
     );
 
-    $method = "ENTRY_$method";
+    my $handle_content = sub {
+        my $content = shift;
 
+        if (ref $content) {
+            $res->content_type('application/json');
+            $res->body(encode_json($content));
+        } else {
+            $res->body($content);
+        }
+
+        return $res->finalize;
+    };
+
+    $method = "ENTRY_$method";
     my $content = $spec->{entity}->$method($c);
 
-    if (ref $content) {
-        $res->content_type('application/json');
-        $res->body(encode_json($content));
-    } else {
-        $res->body($content);
-    }
+    if (ref($content) eq 'CODE') {
+        return sub {
+            my $responder = shift;
 
-    return $res->finalize;
+            my $wrapped_responder = sub { $responder->($handle_content->($_[0])) };
+
+            return $content->($wrapped_responder);
+        };
+    } else {
+        return $handle_content->($content);
+    }
 }
 
 

@@ -10,7 +10,9 @@ use Plack::Middleware::Deflater;
 use Vmprobe::Util;
 use Vmprobe::Daemon::Config;
 use Vmprobe::Daemon::Router;
+
 use Vmprobe::Daemon::Entity::Remote;
+use Vmprobe::Daemon::Entity::Snapshot;
 
 
 
@@ -21,11 +23,11 @@ sub new {
     bless $self, $class;
 
     $self->open_db();
+    $self->create_entities();
     $self->start_service();
 
     return $self;
 }
-
 
 
 sub open_db {
@@ -57,6 +59,14 @@ sub open_db {
 
 
 
+sub create_entities {
+    my ($self) = @_;
+
+    $self->{entities}->{remote} = Vmprobe::Daemon::Entity::Remote->new(api => $self);
+    $self->{entities}->{snapshot} = Vmprobe::Daemon::Entity::Snapshot->new(api => $self);
+}
+
+
 sub start_service {
     my ($self) = @_;
 
@@ -82,38 +92,38 @@ sub start_service {
 
 
 
-=pod
-/remote (GET, POST)
-/remote/:remoteIdOrName (GET, PUT, DELETE)
-
-/cache/monitor (GET, POST)
-/cache/monitor/:monitor (GET, PUT, DELETE)
-
-/cache/snapshot (GET, POST)
-/cache/snapshot/:snapshotId (GET, DELETE)
-/cache/snapshot/:snapshotId/restore (POST)
-
-/cache/standby (GET, POST)
-/cache/standby/:standbyId (GET, PUT, DELETE)
-=cut
-
-
 sub api_plack_handler {
     my ($self) = @_;
 
     my $router = Vmprobe::Daemon::Router->new;
 
     $router->mount({
-        entity => Vmprobe::Daemon::Entity::Remote->new(api => $self),
+        entity => $self->{entities}->{remote},
         routes => {
             '/remote' => {
                 GET => 'get_all_remotes',
-                POST => 'create_new_remote_anon',
+                POST => 'create_new_remote',
             },
             '/remote/:remoteId' => {
                 GET => 'get_remote',
                 PUT => 'update_remote',
                 DELETE => 'delete_remote',
+            },
+        },
+    });
+
+    $router->mount({
+        entity => $self->{entities}->{snapshot},
+        routes => {
+            '/cache/snapshot' => {
+                POST => 'create_new_snapshot',
+            },
+            '/cache/snapshot/:snapshotId' => {
+                GET => 'get_snapshot',
+                DELETE => 'delete_snapshot',
+            },
+            '/cache/snapshot/:snapshotId/restore' => {
+                POST => 'restore_snapshot',
             },
         },
     });

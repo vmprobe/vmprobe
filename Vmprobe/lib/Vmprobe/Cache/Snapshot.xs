@@ -22,8 +22,9 @@ PROTOTYPES: ENABLE
 
 
 SV *
-take(path_sv)
+take(path_sv, sparse)
         SV *path_sv
+        int sparse
     CODE:
         char *path_p;
         size_t path_len;
@@ -37,7 +38,7 @@ take(path_sv)
         try {
             vmprobe::cache::snapshot::builder b;
 
-            b.crawl(path, 0);
+            b.crawl(path, sparse);
 
             output = newSVpvn(b.buf.data(), b.buf.size());
         } catch(std::runtime_error &e) {

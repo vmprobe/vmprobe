@@ -116,7 +116,7 @@ sub ENTRY_get_remote {
 }
 
 
-sub ENTRY_create_new_remote_anon {
+sub ENTRY_create_new_remote {
     my ($self, $c) = @_;
 
     my $remote = {};
@@ -126,7 +126,7 @@ sub ENTRY_create_new_remote_anon {
     return $c->err_bad_request("remote with host $remote->{host} already exists")
         if exists $self->{remote_ids_by_host}->{$remote->{host}};
 
-    return $c->err_bad_request("unknown parameters: " . join(', ', keys %{ $c->params })) if keys %{ $c->params };
+    return $c->err_unknown_params if $c->is_params_left;
 
 
     my $txn = $self->lmdb_env->BeginTxn();
