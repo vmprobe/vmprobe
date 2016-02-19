@@ -7,6 +7,7 @@ use Regexp::Assemble;
 use Plack::Request;
 use Plack::Response;
 use JSON::XS;
+use Callback::Frame;
 
 use Vmprobe::Daemon::API::RequestContext;
 
@@ -119,7 +120,18 @@ sub route {
     };
 
     $method = "ENTRY_$method";
-    my $content = $spec->{entity}->$method($c);
+    my $content;
+
+    eval {
+        $content = $spec->{entity}->$method($c);
+
+        $content = $handle_content->($content) if ref($content) ne 'CODE';
+    };
+
+    if ($@) {
+        say STDERR "Caught exception: $@";
+        return $self->error(500, "internal server error: $@");
+    }
 
     if (ref($content) eq 'CODE') {
         return sub {
@@ -127,10 +139,16 @@ sub route {
 
             my $wrapped_responder = sub { $responder->($handle_content->($_[0])) };
 
-            return $content->($wrapped_responder);
+            frame_try {
+                $content->($wrapped_responder);
+            } frame_catch {
+                say STDERR "Caught exception: $@";
+                $responder->($self->error(500, "internal server error: $@"));
+            };
+
         };
     } else {
-        return $handle_content->($content);
+        return $content;
     }
 }
 

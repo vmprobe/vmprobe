@@ -4,33 +4,24 @@ use common::sense;
 
 use parent 'Vmprobe::Daemon::Entity';
 
-use LMDB_File qw(:flags :cursor_op);
-
-use Vmprobe::Util;
 use Vmprobe::Remote;
+use Vmprobe::Daemon::DB;
 
 
 
 sub init {
     my ($self) = @_;
 
-    my $txn = $self->lmdb_env->BeginTxn();
-
-    my $remote_db = $txn->OpenDB({
-                        dbname => 'remote',
-                        flags => MDB_CREATE,
-                    });
-
     $self->{remotes_by_id} = {};
     $self->{remote_ids_by_host} = {};
     $self->{remote_objs_by_id} = {};
 
-    $self->foreach_db($remote_db, sub {
-        my ($key, $value) = @_;
+    my $txn = $self->lmdb_env->BeginTxn();
 
-        return if $key !~ /^\d+$/;
+    Vmprobe::Daemon::DB::foreach_remote($txn, sub {
+        my $remote = shift;
 
-        $self->load_remote(sereal_decode($value));
+        $self->load_remote($remote);
     });
 
     $txn->commit;
@@ -131,13 +122,7 @@ sub ENTRY_create_new_remote {
 
     my $txn = $self->lmdb_env->BeginTxn();
 
-    my $remote_db = $txn->OpenDB({ dbname => 'remote', });
-
-    $remote->{id} = $remote_db->get('next') || 1;
-
-    $remote_db->put($remote->{id}, sereal_encode($remote));
-
-    $remote_db->put('next', $remote->{id} + 1);
+    Vmprobe::Daemon::DB::insert_remote($txn, $remote);
 
     $self->load_remote($remote);
 
@@ -156,9 +141,7 @@ sub ENTRY_delete_remote {
 
     my $txn = $self->lmdb_env->BeginTxn();
 
-    my $remote_db = $txn->OpenDB({ dbname => 'remote', });
-
-    $remote_db->del($id);
+    Vmprobe::Daemon::DB::delete_remote($txn, $id);
 
     $self->unload_remote($remote);
 

@@ -13,6 +13,7 @@ use Vmprobe::Daemon::Router;
 
 use Vmprobe::Daemon::Entity::Remote;
 use Vmprobe::Daemon::Entity::Snapshot;
+use Vmprobe::Daemon::DB;
 
 
 
@@ -50,6 +51,12 @@ sub open_db {
                                 maxdbs => 32,
                                 mode   => 0600,
                             });
+
+        my $txn = $self->{lmdb}->BeginTxn;
+
+        Vmprobe::Daemon::DB::check_arch($txn);
+
+        $txn->commit;
     };
 
     if ($@) {
@@ -116,7 +123,7 @@ sub api_plack_handler {
         entity => $self->{entities}->{snapshot},
         routes => {
             '/cache/snapshot' => {
-                POST => 'create_new_snapshot',
+                POST => 'take_snapshot',
             },
             '/cache/snapshot/:snapshotId' => {
                 GET => 'get_snapshot',

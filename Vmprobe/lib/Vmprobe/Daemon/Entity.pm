@@ -27,8 +27,6 @@ sub get_remote {
 
     my $remote = $self->{api}->{entities}->{'remote'}->{remote_objs_by_id}->{$id};
 
-    die "no such remoteId '$id'" if !defined $remote;
-
     return $remote;
 }
 
@@ -38,32 +36,6 @@ sub lmdb_env {
     return $self->{api}->{lmdb};
 }
 
-
-sub foreach_db {
-    my ($self, $db, $cb) = @_;
-
-    my $cursor = my $cursor = $db->Cursor;
-
-    my ($key, $value);
-
-    eval {
-        $cursor->get($key, $value, MDB_FIRST);
-    };
-
-    return if $@;
-
-    $cb->($key, $value);
-
-    while(1) {
-        eval {
-            $cursor->get($key, $value, MDB_NEXT);
-        };
-
-        return if $@;
-
-        $cb->($key, $value);
-    }
-}
 
 
 1;
