@@ -65,7 +65,8 @@ class builder : public vmprobe::cache::binformat::builder {
     void delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
 
   private:
-    void add_element_deleted_stub(element &elem);
+    void delta_add_elem(bool before_is_delta, element *elem);
+    void delta_del_elem(bool before_is_delta, bool after_is_delta, element *elem);
     void add_element_xor_diff(element &elem_before, element &elem_after);
     void add_element(element &elem);
 };

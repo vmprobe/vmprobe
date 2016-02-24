@@ -87,24 +87,13 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
 
     while (before_elem || after_elem) {
         if (!before_elem) {
-            if ((after_elem->flags & ELEMENT_DELETED)) {
-                if (after_elem->bf.num_buckets) {
-                    if (!before_is_delta) after_elem->flags &= ~ELEMENT_DELETED;
-                    add_element(*after_elem);
-                }
-            } else {
-                add_element(*after_elem);
-            }
+            delta_add_elem(before_is_delta, after_elem);
             after_elem = after_parser.next();
             continue;
         }
 
         if (!after_elem) {
-            if (!before_is_delta && !after_is_delta) {
-                add_element_deleted_stub(*before_elem);
-            } else {
-                add_element(*before_elem);
-            }
+            delta_del_elem(before_is_delta, after_is_delta, before_elem);
             before_elem = before_parser.next();
             continue;
         }
@@ -115,22 +104,11 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
         int cmp = before_filename.compare(after_filename);
 
         if (cmp > 0) {
-            if ((after_elem->flags & ELEMENT_DELETED)) {
-                if (after_elem->bf.num_buckets) {
-                    if (!before_is_delta) after_elem->flags &= ~ELEMENT_DELETED;
-                    add_element(*after_elem);
-                }
-            } else {
-                add_element(*after_elem);
-            }
+            delta_add_elem(before_is_delta, after_elem);
             after_elem = after_parser.next();
             continue;
         } else if (cmp < 0) {
-            if (!before_is_delta && !after_is_delta) {
-                add_element_deleted_stub(*before_elem);
-            } else {
-                add_element(*before_elem);
-            }
+            delta_del_elem(before_is_delta, after_is_delta, before_elem);
             before_elem = before_parser.next();
             continue;
         } else {
@@ -160,14 +138,29 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
 }
 
 
-void builder::add_element_deleted_stub(element &elem) {
-    element new_elem;
+void builder::delta_add_elem(bool before_is_delta, element *elem) {
+    if ((elem->flags & ELEMENT_DELETED)) {
+        if (elem->bf.num_buckets) {
+            if (!before_is_delta) elem->flags &= ~ELEMENT_DELETED;
+            add_element(*elem);
+        }
+    } else {
+        add_element(*elem);
+    }
+}
 
-    new_elem.flags |= ELEMENT_DELETED;
-    new_elem.filename = elem.filename;
-    new_elem.filename_len = elem.filename_len;
+void builder::delta_del_elem(bool before_is_delta, bool after_is_delta, element *elem) {
+    if (!before_is_delta && !after_is_delta) {
+        element new_elem;
 
-    add_element(new_elem);
+        new_elem.flags |= ELEMENT_DELETED;
+        new_elem.filename = elem->filename;
+        new_elem.filename_len = elem->filename_len;
+
+        add_element(new_elem);
+    } else {
+        add_element(*elem);
+    }
 }
 
 void builder::add_element_xor_diff(element &elem_before, element &elem_after) {
