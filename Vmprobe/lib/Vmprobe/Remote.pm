@@ -169,6 +169,7 @@ sub _get_handle_cmd {
 
     my $vmprobe_binary;
 
+    $vmprobe_binary //= $ENV{VMPROBE_BINARY};
     $vmprobe_binary //= $Vmprobe::Remote::global_params->{vmprobe_binary};
     $vmprobe_binary //= $0 if !$self->{ssh_to_localhost} && $self->{host} eq 'localhost';
     $vmprobe_binary //= 'vmprobe';
