@@ -7,9 +7,9 @@ use Vmprobe::Cache::Snapshot;
 sub run {
     my ($params) = @_;
 
-    my $sparse = $params->{sparse} ? 1 : 0;
+    die "need path" if !defined $params->{path};
 
-    my $snapshot = Vmprobe::Cache::Snapshot::take($params->{path}, $sparse);
+    my $snapshot = Vmprobe::Cache::Snapshot::take($params->{path});
 
     return { snapshot => $snapshot };
 }

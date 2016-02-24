@@ -22,9 +22,8 @@ PROTOTYPES: ENABLE
 
 
 SV *
-take(path_sv, sparse)
+take(path_sv)
         SV *path_sv
-        int sparse
     CODE:
         char *path_p;
         size_t path_len;
@@ -38,7 +37,7 @@ take(path_sv, sparse)
         try {
             vmprobe::cache::snapshot::builder b;
 
-            b.crawl(path, sparse);
+            b.crawl(path);
 
             output = newSVpvn(b.buf.data(), b.buf.size());
         } catch(std::runtime_error &e) {
@@ -52,17 +51,24 @@ take(path_sv, sparse)
 
 
 void
-restore(snapshot_sv)
+restore(path_sv, snapshot_sv)
+        SV *path_sv
         SV *snapshot_sv
     CODE:
+        char *path_p;
+        size_t path_len;
         char *snapshot_p;
         size_t snapshot_len;
 
+        path_len = SvCUR(path_sv);
+        path_p = SvPV(path_sv, path_len);
         snapshot_len = SvCUR(snapshot_sv);
         snapshot_p = SvPV(snapshot_sv, snapshot_len);
 
+        std::string path(path_p, path_len);
+
         try {
-            vmprobe::cache::snapshot::restore(snapshot_p, snapshot_len);
+            vmprobe::cache::snapshot::restore(path, snapshot_p, snapshot_len);
         } catch(std::runtime_error &e) {
             croak(e.what());
         }

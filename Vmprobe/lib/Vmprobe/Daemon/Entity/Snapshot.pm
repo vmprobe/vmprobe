@@ -101,11 +101,10 @@ sub ENTRY_restore_snapshot {
     return sub {
         my $responder = shift;
 
-        my $start_time = Time::HiRes::time();
-
         $remote->probe(
             'cache::restore',
             {
+                path => $snapshot->{path},
                 snapshot => $snapshot->{snapshot},
             },
             sub {
