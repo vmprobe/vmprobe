@@ -43,7 +43,6 @@ sub ENTRY_take_snapshot {
             'cache::snapshot',
             {
                 path => $params->{path},
-                sparse => 1,
             },
             sub {
                 my ($res) = @_;
