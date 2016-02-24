@@ -30,21 +30,19 @@ my $cmd_specs = [
     },
   },
   {
-    cmd => 'cpan',
-    doc => q{Create a distribution ready for CPAN in the cpan-dist-dir/ directory},
+    cmd => 'cpan-vmprobe',
+    doc => q{Create a Vmprobe distribution ready for CPAN in the cpan-dist-dir/ directory},
     run => sub {
-      prepare_perl_dir_for_cpan();
+      prepare_perl_dir_for_cpan('Vmprobe');
       clean_libvmprobe();
-      build_web_resources();
 
-      sys('rm -rf cpan-dist-dir/');
-      sys('mkdir cpan-dist-dir');
+      sys('mkdir -p cpan-dist-dir');
+      sys('rm -rf cpan-dist-dir/Vmprobe');
       sys('cp -L -R Vmprobe/ cpan-dist-dir/');
-      sys('cp -R web/dist/ cpan-dist-dir/Vmprobe/webdist/');
       sys('cp COPYING cpan-dist-dir/Vmprobe/');
 
-      install_version('cpan-dist-dir/Vmprobe/lib/Vmprobe.pm', get_vmprobe_version());
-      install_version('cpan-dist-dir/Vmprobe/bin/vmprobe', get_vmprobe_version());
+      install_version('cpan-dist-dir/Vmprobe/lib/Vmprobe.pm', get_vmprobe_version('Vmprobe'));
+      install_version('cpan-dist-dir/Vmprobe/bin/vmprobe', get_vmprobe_version('Vmprobe'));
 
       sys('cd cpan-dist-dir/Vmprobe/ && perl Build.PL && perl Build manifest');
       sys('cd cpan-dist-dir/Vmprobe/ && perl Build dist');
@@ -54,7 +52,7 @@ my $cmd_specs = [
     cmd => 'version',
     doc => q{Prints the version of vmprobe.},
     run => sub {
-      print get_vmprobe_version(), "\n";
+      print "Vmprobe: " . get_vmprobe_version('Vmprobe'), "\n";
     },
   },
   {
@@ -72,7 +70,7 @@ $cmd = 'help' if grep { $cmd eq $_ } qw{ -h --help -? };
 
 foreach my $cmd_spec (@{ $cmd_specs }) {
   if ($cmd eq $cmd_spec->{cmd}) {
-    $cmd_spec->{run}->();
+    $cmd_spec->{run}->(@ARGV);
     exit 0;
   }
 }
@@ -181,13 +179,15 @@ sub clean_libvmprobe {
 }
 
 sub prepare_perl_dir_for_cpan {
-    sys('cd Vmprobe/ && perl Build.PL');
-    sys('cd Vmprobe/ && perl Build');
-    sys('cd Vmprobe/ && perl Build test');
-    sys('cd Vmprobe/ && perl Build realclean');
+    my $dir = shift;
 
-    die "untracked files in Vmprobe/ perl directory"
-        if `cd Vmprobe/ && git clean -nxd .`;
+    sys("cd $dir && perl Build.PL");
+    sys("cd $dir && perl Build");
+    sys("cd $dir && perl Build test");
+    sys("cd $dir && perl Build realclean");
+
+    die "untracked files in $dir perl directory"
+        if `cd $dir && git clean -nxd .`;
 }
 
 sub build_web_resources {
@@ -211,15 +211,19 @@ sub sys {
 
 
 
-my $vmprobe_version;
+my $version_cache;
 
 sub get_vmprobe_version {
-  return $vmprobe_version if defined $vmprobe_version;
+    my $dist = shift;
 
-  $vmprobe_version = `git describe --tags`;
-  chomp $vmprobe_version;
+    return $version_cache->{$dist} if defined $version_cache->{$dist};
 
-  return $vmprobe_version;
+    $version_cache->{$dist} = `git describe --tags --match '$dist-*'`;
+    chomp $version_cache->{$dist};
+
+    $version_cache->{$dist} =~ s/^$dist-//;
+
+    return $version_cache->{$dist};
 }
 
 
