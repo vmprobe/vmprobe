@@ -7,11 +7,15 @@ LDFLAGS  =
 
 OBJS     = crawler.o snapshot.o summary.o file.o cache.o varuint64.o binformat.o path.o
 
-.PHONY: all clean
+.PHONY: all clean test
 all: libvmprobe.a libvmprobe.so
 
 clean:
 	rm -f *.o *.so *.a
+	make -C test clean
+
+test: libvmprobe.so
+	make -C test
 
 libvmprobe.a: $(OBJS)
 	$(AR) rs $@ $(OBJS)
