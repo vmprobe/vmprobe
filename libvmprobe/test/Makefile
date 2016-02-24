@@ -5,13 +5,18 @@ CXXFLAGS = -I.. -L.. $(STD) $(OPT) $(W) -fPIC $(XCXXFLAGS)
 LDLIBS   = -lvmprobe
 LDFLAGS  = -Wl,-rpath,..
 
-TESTS    = take-snapshot parse-snapshot delta-snapshots
+TESTS    = take-snapshot restore-snapshot parse-snapshot delta-snapshots
 
-.PHONY: all clean
+.PHONY: all clean test
 
-all: $(TESTS)
+all: test
+
+build: $(TESTS)
+
+test: build
+	perl test.pl
 
 clean:
-	rm -f $(TESTS)
+	rm -rf $(TESTS)
 
 $(OBJS): %.cpp Makefile

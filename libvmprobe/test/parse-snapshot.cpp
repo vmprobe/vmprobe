@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
         p.process([&](vmprobe::cache::snapshot::element &elem) {
             std::string filename(elem.filename, elem.filename_len);
 
-            std::cout << filename << std::endl;
+            std::cout << "FILE: '" << filename << "'" << std::endl;
             std::cout << "  RECORD FLAGS: " << elem.flags << std::endl;
             std::cout << "  SIZE: " << elem.file_size << std::endl;
 

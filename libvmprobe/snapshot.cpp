@@ -5,6 +5,7 @@
 
 #include "pageutils.h"
 #include "varuint64.h"
+#include "path.h"
 #include "snapshot.h"
 #include "crawler.h"
 #include "file.h"
@@ -17,10 +18,10 @@ builder::builder() : vmprobe::cache::binformat::builder(vmprobe::cache::binforma
     buf += vmprobe::varuint64::encode(pagesize == 4096 ? 0 : pagesize);
 }
 
-void builder::crawl(std::string path, int sparse) {
-    uint64_t flags = 0;
+void builder::crawl(std::string &path) {
+    std::string normalized_path = vmprobe::path::normalize(path);
 
-    if (sparse) flags |= SNAPSHOT_SPARSE;
+    uint64_t flags = 0;
     buf += vmprobe::varuint64::encode(flags);
 
     vmprobe::cache::mincore_result r;
@@ -31,13 +32,13 @@ void builder::crawl(std::string path, int sparse) {
         f.mmap();
         f.mincore(r);
 
-        if (sparse && !r.resident_pages) return;
+        if (!r.resident_pages) return;
 
         element elem;
 
         elem.flags = 0;
-        elem.filename = (char*) filename.data();
-        elem.filename_len = filename.size();
+        elem.filename = (char*) filename.data() + normalized_path.size();
+        elem.filename_len = filename.size() - normalized_path.size();
         elem.file_size = f.get_size();
         elem.bf.num_buckets = r.num_pages;
         elem.bf.data = r.bitfield_vec.data();
@@ -45,7 +46,7 @@ void builder::crawl(std::string path, int sparse) {
         add_element(elem);
     });
 
-    c.crawl(path);
+    c.crawl(normalized_path);
 }
 
 
@@ -53,22 +54,29 @@ void builder::delta(std::string &before, std::string &after) {
     delta((char*)before.data(), before.size(), (char*)after.data(), after.size());
 }
 
+/*
+N: normal (non-delta)
+D: delta
+
+N, N: D, add stub
+N, D: N, ignore
+D, N: invalid
+D, D: D, merge
+*/
+
 void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len) {
     vmprobe::cache::snapshot::parser before_parser(before_ptr, before_len);
     vmprobe::cache::snapshot::parser after_parser(after_ptr, after_len);
 
-    if ((before_parser.flags & SNAPSHOT_SPARSE) != (after_parser.flags & SNAPSHOT_SPARSE)) {
-        throw std::runtime_error("one snapshot was sparse, the other wasn't");
-    }
+    bool before_is_delta = (before_parser.flags & SNAPSHOT_DELTA);
+    bool after_is_delta = (after_parser.flags & SNAPSHOT_DELTA);
 
-    if ((before_parser.flags & SNAPSHOT_DELTA)) {
-        throw std::runtime_error("first snapshot cannot be a delta");
-    }
+    uint64_t new_flags = 0;
 
-    uint64_t new_flags = before_parser.flags;
-
-    if (!(after_parser.flags & SNAPSHOT_DELTA)) {
+    if ((before_is_delta && after_is_delta) || (!before_is_delta && !after_is_delta)) {
         new_flags |= SNAPSHOT_DELTA;
+    } else if (before_is_delta && !after_is_delta) {
+        throw std::runtime_error("if before snapshot is a delta, after must be too");
     }
 
     buf += vmprobe::varuint64::encode(new_flags);
@@ -79,13 +87,20 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
 
     while (before_elem || after_elem) {
         if (!before_elem) {
-            add_element(*after_elem);
+            if ((after_elem->flags & ELEMENT_DELETED)) {
+                if (after_elem->bf.num_buckets) {
+                    if (!before_is_delta) after_elem->flags &= ~ELEMENT_DELETED;
+                    add_element(*after_elem);
+                }
+            } else {
+                add_element(*after_elem);
+            }
             after_elem = after_parser.next();
             continue;
         }
 
         if (!after_elem) {
-            if ((new_flags & SNAPSHOT_DELTA)) {
+            if (!before_is_delta && !after_is_delta) {
                 add_element_deleted_stub(*before_elem);
             } else {
                 add_element(*before_elem);
@@ -100,11 +115,18 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
         int cmp = before_filename.compare(after_filename);
 
         if (cmp > 0) {
-            add_element(*after_elem);
+            if ((after_elem->flags & ELEMENT_DELETED)) {
+                if (after_elem->bf.num_buckets) {
+                    if (!before_is_delta) after_elem->flags &= ~ELEMENT_DELETED;
+                    add_element(*after_elem);
+                }
+            } else {
+                add_element(*after_elem);
+            }
             after_elem = after_parser.next();
             continue;
         } else if (cmp < 0) {
-            if ((new_flags & SNAPSHOT_DELTA)) {
+            if (!before_is_delta && !after_is_delta) {
                 add_element_deleted_stub(*before_elem);
             } else {
                 add_element(*before_elem);
@@ -112,8 +134,23 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
             before_elem = before_parser.next();
             continue;
         } else {
-            if (!(after_elem->flags & ELEMENT_DELETED)) {
+            if (!before_is_delta && !after_is_delta) {
                 add_element_xor_diff(*before_elem, *after_elem);
+            } else if (!before_is_delta && after_is_delta) {
+                if ((after_elem->flags & ELEMENT_DELETED)) {
+                    if (after_elem->bf.num_buckets) {
+                        if (!before_is_delta) after_elem->flags &= ~ELEMENT_DELETED;
+                        add_element(*after_elem);
+                    }
+                } else {
+                    add_element_xor_diff(*before_elem, *after_elem);
+                }
+            } else {
+                if ((after_elem->flags & ELEMENT_DELETED)) {
+                    add_element(*after_elem);
+                } else {
+                    add_element_xor_diff(*before_elem, *after_elem);
+                }
             }
             before_elem = before_parser.next();
             after_elem = after_parser.next();
@@ -136,7 +173,12 @@ void builder::add_element_deleted_stub(element &elem) {
 void builder::add_element_xor_diff(element &elem_before, element &elem_after) {
     element new_elem;
 
-    new_elem.flags = elem_after.flags;
+    new_elem.flags = 0;
+
+    if ((elem_before.flags & ELEMENT_DELETED) || (elem_after.flags & ELEMENT_DELETED)) {
+        new_elem.flags |= ELEMENT_DELETED;
+    }
+
     new_elem.filename = elem_after.filename;
     new_elem.filename_len = elem_after.filename_len;
     new_elem.file_size = elem_after.file_size;
@@ -158,7 +200,7 @@ void builder::add_element_xor_diff(element &elem_before, element &elem_after) {
         }
     }
 
-    if (elem_after.bf.data_size() > elem_after.bf.data_size()) {
+    if (elem_after.bf.data_size() > elem_before.bf.data_size()) {
         for(; i < elem_after.bf.data_size(); i++) {
             new_vec[i] = elem_after.bf.data[i];
             accumulator |= new_vec[i];
@@ -280,14 +322,43 @@ static void restore_residency_state(uint64_t bucket_size, vmprobe::cache::file &
     file.advise(advice::DEFAULT_NORMAL);
 }
 
-void restore(char *ptr, size_t len) {
-    parser p(ptr, len);
+void restore(std::string &path, char *snapshot_ptr, size_t snapshot_len) {
+    std::string normalized_path = vmprobe::path::normalize(path);
 
-    p.process([&](element &elem) {
-        std::string filename(elem.filename, elem.filename_len);
-        vmprobe::cache::file f(filename);
-        restore_residency_state(p.pagesize, f, elem.bf);
+    parser p(snapshot_ptr, snapshot_len);
+    element *e = p.next();
+
+    if ((p.flags & SNAPSHOT_DELTA)) {
+        throw std::runtime_error("can't restore a snapshot delta");
+    }
+
+    vmprobe::crawler c([&](std::string &crawler_filename, struct stat &sb) {
+      vmprobe::cache::file f(crawler_filename);
+
+      while(1) {
+        if (!e) {
+            f.evict(0, sb.st_size);
+            return;
+        }
+
+        int cmp = crawler_filename.compare(normalized_path.size(), std::string::npos, e->filename, e->filename_len);
+
+        if (cmp > 0) {
+            // in snapshot, not in filesystem
+            e = p.next();
+        } else if (cmp < 0) {
+            // in filesystem, not in snapshot
+            f.evict(0, sb.st_size);
+            return;
+        } else {
+            restore_residency_state(p.pagesize, f, e->bf);
+            e = p.next();
+            return;
+        }
+      }
     });
+
+    c.crawl(normalized_path);
 }
 
 

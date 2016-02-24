@@ -1,3 +1,4 @@
 delta-snapshots
 parse-snapshot
 take-snapshot
+restore-snapshot

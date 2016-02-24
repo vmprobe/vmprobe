@@ -12,10 +12,9 @@
 namespace vmprobe { namespace cache { namespace snapshot {
 
 
-const static uint64_t SNAPSHOT_SPARSE = 1; // normal snapshots fully list every file, sparse snapshots only list files in memory
-const static uint64_t SNAPSHOT_DELTA = 2;  // whether this snapshot's bitfield should be interpreted as a delta or not
+const static uint64_t SNAPSHOT_DELTA = 1;  // whether this snapshot's bitfield should be interpreted as a delta or not
 
-const static uint64_t ELEMENT_DELETED = 1; // this file was deleted, not just evicted (also used for eviction in sparse mode)
+const static uint64_t ELEMENT_DELETED = 1; // in deltas, indicates that this file should be removed from the snapshot
 
 
 /*
@@ -60,7 +59,7 @@ class builder : public vmprobe::cache::binformat::builder {
   public:
     builder();
 
-    void crawl(std::string path, int sparse);
+    void crawl(std::string &path);
 
     void delta(std::string &before, std::string &after);
     void delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
@@ -93,7 +92,7 @@ class parser : public vmprobe::cache::binformat::parser {
     element curr_elem;
 };
 
-void restore(char *ptr, size_t len);
+void restore(std::string &path, char *snapshot_ptr, size_t snapshot_len);
 
 
 
