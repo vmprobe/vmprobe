@@ -5,7 +5,7 @@ use common::sense;
 use parent 'Vmprobe::Daemon::Entity';
 
 use Vmprobe::Remote;
-use Vmprobe::Daemon::DB;
+use Vmprobe::Daemon::DB::Remote;
 
 
 
@@ -18,10 +18,11 @@ sub init {
 
     my $txn = $self->lmdb_env->BeginTxn();
 
-    Vmprobe::Daemon::DB::foreach_remote($txn, sub {
+    Vmprobe::Daemon::DB::Remote->new($txn)->foreach(sub {
+        my $key = shift;
         my $remote = shift;
 
-        $self->load_remote($remote);
+        $self->load_remote_into_cache($remote);
     });
 
     $txn->commit;
@@ -29,7 +30,7 @@ sub init {
 
 
 
-sub load_remote {
+sub load_remote_into_cache {
     my ($self, $remote) = @_;
 
     my $id = $remote->{id};
@@ -46,7 +47,7 @@ sub load_remote {
 }
 
 
-sub unload_remote {
+sub unload_remote_from_cache {
     my ($self, $remote) = @_;
 
     my $id = $remote->{id};
@@ -122,9 +123,9 @@ sub ENTRY_create_new_remote {
 
     my $txn = $self->lmdb_env->BeginTxn();
 
-    Vmprobe::Daemon::DB::insert_remote($txn, $remote);
+    Vmprobe::Daemon::DB::Remote->new($txn)->insert($remote);
 
-    $self->load_remote($remote);
+    $self->load_remote_into_cache($remote);
 
     $txn->commit;
 
@@ -141,9 +142,9 @@ sub ENTRY_delete_remote {
 
     my $txn = $self->lmdb_env->BeginTxn();
 
-    Vmprobe::Daemon::DB::delete_remote($txn, $id);
+    Vmprobe::Daemon::DB::Remote->new($txn)->delete($id);
 
-    $self->unload_remote($remote);
+    $self->unload_remote_from_cache($remote);
 
     $txn->commit;
 

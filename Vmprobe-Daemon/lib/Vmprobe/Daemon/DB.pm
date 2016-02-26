@@ -8,159 +8,141 @@ use Vmprobe::Util;
 
 
 
-## global
 
-sub get_global_db {
-    my ($txn) = @_;
+sub db_name { die "sub-class must specify db name" }
 
-    my $global_db = $txn->OpenDB({
-                        dbname => 'global',
-                        flags => MDB_CREATE,
-                    });
+sub key_type { die "sub-class must specify key type" }
 
-    return $global_db;
-}
+sub value_type { die "sub-class must specify value type" }
 
 
-sub check_arch {
-    my ($txn) = @_;
 
-    my $global_db = get_global_db($txn);
+our $dbname_to_dbi = {};
 
-    my $word = pack("j", 1); ## MDB_INTEGERKEY assumes IV
+sub new {
+    my ($class, $txn) = @_;
 
-    my $word_from_db = $global_db->get('arch_word_format');
+    my $self = { txn => $txn, };
+    bless $self, $class;
 
-    if (!defined $word_from_db) {
-        $global_db->put('arch_word_format', $word);
-        return;
+    my $db_name = $self->db_name;
+
+    my $dbi = $dbname_to_dbi->{$db_name};
+
+    if (!defined $dbi) {
+        my $flags = MDB_CREATE;
+
+        my $key_type = $self->key_type;
+
+        if ($key_type eq 'autoinc') {
+            $flags |= MDB_INTEGERKEY;
+        } elsif ($key_type eq 'raw') {
+            ## nothing
+        } else {
+            die "unknown key type: $key_type";
+        }
+
+        $dbi = $dbname_to_dbi->{$db_name} = $txn->open($db_name, $flags);
     }
 
-    my $len = length($word);
-    my $len_from_db = length($word_from_db);
+    $self->{db} = LMDB_File->new($txn, $dbi);
 
-    die "incompatible DB: word size is $len_from_db, need $len"
-            if $len != $len_from_db;
+    $self->{db}->ReadMode(1);
 
-    die "incompatible DB: endianness"
-            if $word ne $word_from_db;
+    return $self;
 }
 
 
 
 
-## remote
+sub insert {
+    my $self = shift;
 
-sub get_remote_db {
-    my ($txn) = @_;
+    my $key_type = $self->key_type;
+    my $value_type = $self->value_type;
 
-    my $remote_db = $txn->OpenDB({
-                        dbname => 'remote',
-                        flags => MDB_CREATE | MDB_INTEGERKEY,
-                    });
+    my ($key, $value);
 
-    return $remote_db;
+    if ($key_type eq 'autoinc') {
+        my $cursor = $self->{db}->Cursor;
+
+        my $last_key = 0;
+
+        eval {
+            $cursor->get($last_key, undef, MDB_LAST);
+        };
+
+        $key = $last_key + 1;
+    } elsif ($key_type eq 'raw') {
+        $key = shift;
+    } else {
+        die "unknown key type: $key_type";
+    }
+
+
+    $value = shift;
+
+    if ($value_type eq 'sereal') {
+        $value->{id} = $key if $key_type eq 'autoinc';
+
+        $value = sereal_encode($value);
+    } elsif ($value_type eq 'raw') {
+        ## nothing
+    } else {
+        die "unknown value type: $value_type";
+    }
+
+    $self->{db}->put($key, $value);
 }
 
-sub foreach_remote {
-    my ($txn, $cb) = @_;
 
-    my $remote_db = get_remote_db($txn);
+sub get {
+    my ($self, $key) = @_;
 
-    _foreach_db($remote_db, sub {
-        my ($key, $value) = @_;
+    my $value;
 
-        $cb->(sereal_decode($value));
+    eval {
+        $self->{db}->get($key, $value);
+    };
+
+    return undef if !defined $value;
+
+
+    my $value_type = $self->value_type;
+
+    if ($value_type eq 'sereal') {
+        return sereal_decode($value);
+    } elsif ($value_type eq 'raw') {
+        ## nothing
+        return $value;
+    } else {
+        die "unknown value type: $value_type";
+    }
+}
+
+sub delete {
+    my ($self, $key) = @_;
+
+    $self->{db}->del($key);
+}
+
+
+sub foreach {
+    my ($self, $cb) = @_;
+
+    _foreach_db($self->{db}, sub {
+        my $key = $_[0];
+
+        $cb->($key, sereal_decode($_[1]));
     });
 }
 
 
-sub insert_remote {
-    my ($txn, $remote) = @_;
-
-    my $remote_db = get_remote_db($txn);
-
-    my $id = get_next_id($txn, 'remote');
-
-    $remote->{id} = $id;
-
-    $remote_db->put($id, sereal_encode($remote));
-}
-
-
-sub delete_remote {
-    my ($txn, $id) = @_;
-
-    my $remote_db = get_remote_db($txn);
-
-    $remote_db->del($id);
-}
 
 
 
+#################
 
-## snapshot
-
-
-sub get_snapshot_db {
-    my ($txn) = @_;
-
-    my $snapshot_db = $txn->OpenDB({
-                        dbname => 'snapshot',
-                        flags => MDB_CREATE | MDB_INTEGERKEY,
-                    });
-
-    return $snapshot_db;
-}
-
-sub store_snapshot {
-    my ($txn, $snapshot) = @_;
-
-    my $snapshot_db = get_snapshot_db($txn);
-
-    my $id = get_next_id($txn, 'snapshot');
-
-    $snapshot->{id} = $id;
-
-    $snapshot_db->put($id, sereal_encode($snapshot));
-}
-
-sub get_snapshot {
-    my ($txn, $snapshotId) = @_;
-
-    my $snapshot_db = get_snapshot_db($txn);
-
-    my $snapshot_encoded = $snapshot_db->get($snapshotId);
-
-    return undef if !defined $snapshot_encoded;
-
-    return sereal_decode($snapshot_encoded);
-}
-
-
-
-### Utils
-
-
-sub get_next_id {
-    my ($txn, $table) = @_;
-
-    my $counter_name = "next_id_$table";
-
-    my $global_db = get_global_db($txn);
-
-    my $id = $global_db->get($counter_name);
- 
-    if (defined $id) {
-        $id = unpack("j", $id);
-    } else {
-        $id = 1;
-    }
-
-    $global_db->put($counter_name, pack("j", $id + 1));
-
-    return $id;
-}
 
 
 sub _foreach_db {

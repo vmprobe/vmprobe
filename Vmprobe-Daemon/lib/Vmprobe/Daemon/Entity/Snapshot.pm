@@ -5,9 +5,9 @@ use common::sense;
 use parent 'Vmprobe::Daemon::Entity';
 
 use Time::HiRes;
-use LMDB_File qw(:flags :cursor_op);
 
 use Vmprobe::Util;
+use Vmprobe::Daemon::DB::Snapshot;
 
 
 
@@ -59,7 +59,7 @@ sub ENTRY_take_snapshot {
 
                 my $txn = $self->lmdb_env->BeginTxn();
 
-                Vmprobe::Daemon::DB::store_snapshot($txn, $to_save);
+                Vmprobe::Daemon::DB::Snapshot->new($txn)->insert($to_save);
 
                 $txn->commit;
 
@@ -82,7 +82,7 @@ sub ENTRY_restore_snapshot {
 
     my $txn = $self->lmdb_env->BeginTxn();
 
-    my $snapshot = Vmprobe::Daemon::DB::get_snapshot($txn, $c->url_args->{snapshotId});
+    my $snapshot = Vmprobe::Daemon::DB::Snapshot->new($txn)->get($c->url_args->{snapshotId});
     return $c->err_bad_request('no such snapshotId') if !defined $snapshot;
 
     $txn->commit;

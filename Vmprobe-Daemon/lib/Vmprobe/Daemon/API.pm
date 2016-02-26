@@ -13,7 +13,7 @@ use Vmprobe::Daemon::Router;
 
 use Vmprobe::Daemon::Entity::Remote;
 use Vmprobe::Daemon::Entity::Snapshot;
-use Vmprobe::Daemon::DB;
+use Vmprobe::Daemon::DB::Global;
 
 
 
@@ -54,7 +54,7 @@ sub open_db {
 
         my $txn = $self->{lmdb}->BeginTxn;
 
-        Vmprobe::Daemon::DB::check_arch($txn);
+        Vmprobe::Daemon::DB::Global->new($txn)->check_arch($txn);
 
         $txn->commit;
     };

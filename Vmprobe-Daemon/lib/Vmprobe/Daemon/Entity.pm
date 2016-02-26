@@ -2,8 +2,6 @@ package Vmprobe::Daemon::Entity;
 
 use common::sense;
 
-use LMDB_File qw(:flags :cursor_op);
-
 
 sub new { 
     my ($class, %args) = @_;
