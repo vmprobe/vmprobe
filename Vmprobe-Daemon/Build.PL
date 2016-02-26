@@ -1,0 +1,56 @@
+use 5.010;
+
+use strict;
+
+use lib q(.);
+use Module::Build;
+
+my %module_build_args = (
+  module_name => 'Vmprobe::Daemon',
+  dist_abstract => 'Vmprobe Daemon',
+  dist_author => [ 'Doug Hoyte <doug@hcsw.org>' ],
+  license => 'gpl3',
+
+  script_files => [ 'bin/vmprobed' ],
+
+  build_requires => {
+    'Module::Build' => '0.4214'
+  },
+  configure_requires => {
+    'Module::Build' => '0.4214'
+  },
+  requires => {
+    'common::sense' => 0,
+    'AnyEvent' => 0,
+    'Callback::Frame' => 0,
+    'EV' => 0,
+    'JSON::XS' => 0,
+    'LMDB_File' => 0,
+    'Plack' => 0,
+    'Plack::Middleware::ContentLength' => 0,
+    'Plack::Middleware::Deflater' => 0,
+    'Regexp::Assemble' => 0,
+    'Twiggy::Server' => 0,
+
+    'Vmprobe' => '0.2.0',
+  },
+  test_requires => {
+  },
+
+  extra_compiler_flags => ['-x', 'c++', '-std=c++11', '-Ilibvmprobe'],
+  extra_linker_flags => ['-Llibvmprobe', '-lstdc++', '-lvmprobe'],
+
+  meta_merge => {
+    resources => {
+      homepage => 'https://github.com/vmprobe/vmprobe',
+      bugtracker => 'https://github.com/vmprobe/vmprobe/issues',
+      repository => 'git://github.com/vmprobe/vmprobe.git',
+    },
+  },
+);
+
+
+
+my $build = Module::Build->new(%module_build_args);
+
+$build->create_build_script;
