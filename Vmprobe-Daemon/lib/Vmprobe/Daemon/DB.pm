@@ -74,13 +74,13 @@ sub insert {
 
         $key = $last_key + 1;
     } elsif ($key_type eq 'raw') {
-        $key = shift;
+        $key = shift // die "need to pass in key";
     } else {
         die "unknown key type: $key_type";
     }
 
 
-    $value = shift;
+    $value = shift // die "need to pass in value";
 
     if ($value_type eq 'sereal') {
         $value->{id} = $key if $key_type eq 'autoinc';
@@ -94,6 +94,37 @@ sub insert {
 
     $self->{db}->put($key, $value);
 }
+
+
+sub update{
+    my $self = shift;
+
+    my $key_type = $self->key_type;
+    my $value_type = $self->value_type;
+
+    my ($key, $value);
+
+    if ($key_type eq 'autoinc') {
+        $value = shift // die "need to pass in value";
+        $key = $value->{id};
+    } elsif ($key_type eq 'raw') {
+        $key = shift // die "need to pass in key";
+        $value = shift // die "need to pass in value";
+    } else {
+        die "unknown key type: $key_type";
+    }
+
+    if ($value_type eq 'sereal') {
+        $value = sereal_encode($value);
+    } elsif ($value_type eq 'raw') {
+        ## nothing
+    } else {
+        die "unknown value type: $value_type";
+    }
+
+    $self->{db}->put($key, $value);
+}
+
 
 
 sub get {

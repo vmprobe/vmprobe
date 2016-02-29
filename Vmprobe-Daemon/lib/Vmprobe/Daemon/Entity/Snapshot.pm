@@ -11,13 +11,6 @@ use Vmprobe::Daemon::DB::Snapshot;
 
 
 
-sub init {
-    my ($self) = @_;
-}
-
-
-
-
 
 sub ENTRY_take_snapshot {
     my ($self, $c) = @_;

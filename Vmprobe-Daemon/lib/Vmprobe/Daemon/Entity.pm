@@ -17,9 +17,6 @@ sub new {
 }
 
 
-sub init {}
-
-
 sub get_remote {
     my ($self, $id) = @_;
 
@@ -34,6 +31,9 @@ sub lmdb_env {
     return $self->{api}->{lmdb};
 }
 
+
+sub init {}
+sub remote_removed {}
 
 
 1;

@@ -67,19 +67,25 @@ sub get_remote_by_id {
 
     return if !$remote;
 
-    my $remote_obj = $self->{remote_objs_by_id}->{$id};
-
     return {
         %$remote,
-
-        state => $remote_obj->get_state(),
-        num_connections => $remote_obj->get_num_connections(),
-
-        $remote_obj->{last_error_message} ?
-          (error_message => $remote_obj->{last_error_message}) : (),
-        $remote_obj->{version_info} ?
-          (version_info => $remote_obj->{version_info}) : (),
     };
+}
+
+
+sub populate_remote_with_state {
+    my ($self, $remote) = @_;
+
+    my $remote_obj = $self->{remote_objs_by_id}->{$remote->{id}};
+
+    $remote->{state} = $remote_obj->get_state();
+    $remote->{num_connections} = $remote_obj->get_num_connections();
+
+    $remote->{last_error_message} = $remote_obj->{last_error_message}
+        if defined $remote_obj->{last_error_message};
+
+    $remote->{version_info} = $remote_obj->{version_info}
+        if defined $remote_obj->{version_info};
 }
 
 
@@ -90,7 +96,9 @@ sub ENTRY_get_all_remotes {
     my $remotes = [];
 
     foreach my $id (keys %{ $self->{remotes_by_id} }) {
-        push @$remotes, $self->get_remote_by_id($id);
+        my $remote = $self->get_remote_by_id($id);
+        $self->populate_remote_with_state($remote);
+        push @$remotes, $remote;
     }
 
     return $remotes;
@@ -102,7 +110,9 @@ sub ENTRY_get_remote {
 
     my $id = $c->url_args->{remoteId};
     my $remote = $self->get_remote_by_id($id);
-    return $c->err_not_found('no such remote id') if !$remote;
+    return $c->err_not_found('no such remoteId') if !$remote;
+
+    $self->populate_remote_with_state($remote);
 
     return $remote;
 }
@@ -138,9 +148,13 @@ sub ENTRY_delete_remote {
 
     my $id = $c->url_args->{remoteId};
     my $remote = $self->get_remote_by_id($id);
-    return $c->err_not_found('no such remote id') if !$remote;
+    return $c->err_not_found('no such remoteId') if !$remote;
 
     my $txn = $self->lmdb_env->BeginTxn();
+
+    foreach my $entity (values %{ $self->{api}->{entities} }) {
+        $entity->remote_removed($id, $txn);
+    }
 
     Vmprobe::Daemon::DB::Remote->new($txn)->delete($id);
 

@@ -11,9 +11,10 @@ use Vmprobe::Util;
 use Vmprobe::Daemon::Config;
 use Vmprobe::Daemon::Router;
 
+use Vmprobe::Daemon::DB::Global;
 use Vmprobe::Daemon::Entity::Remote;
 use Vmprobe::Daemon::Entity::Snapshot;
-use Vmprobe::Daemon::DB::Global;
+use Vmprobe::Daemon::Entity::Standby;
 
 
 
@@ -71,6 +72,7 @@ sub create_entities {
 
     $self->{entities}->{remote} = Vmprobe::Daemon::Entity::Remote->new(api => $self);
     $self->{entities}->{snapshot} = Vmprobe::Daemon::Entity::Snapshot->new(api => $self);
+    $self->{entities}->{standby} = Vmprobe::Daemon::Entity::Standby->new(api => $self);
 }
 
 
@@ -131,6 +133,21 @@ sub api_plack_handler {
             },
             '/cache/snapshot/:snapshotId/restore' => {
                 POST => 'restore_snapshot',
+            },
+        },
+    });
+
+    $router->mount({
+        entity => $self->{entities}->{standby},
+        routes => {
+            '/cache/standby' => {
+                GET => 'get_all_standbys',
+                POST => 'create_new_standby',
+            },
+            '/cache/standby/:standbyId' => {
+                GET => 'get_standby',
+                PUT => 'update_standby',
+                DELETE => 'delete_standby',
             },
         },
     });
