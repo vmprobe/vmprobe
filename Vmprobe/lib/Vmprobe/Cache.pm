@@ -7,6 +7,7 @@ XSLoader::load;
 
 
 our $locks = {};
+our $snapshots = {};
 
 
 1;

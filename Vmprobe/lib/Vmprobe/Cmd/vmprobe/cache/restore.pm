@@ -29,12 +29,15 @@ sub run {
     my $encoded_snapshot = Vmprobe::Util::load_file(opt->{input} // '-');
     my $snapshot = sereal_decode($encoded_snapshot);
 
+    die "invalid vmprobe message type: $snapshot->{type}" if $snapshot->{type} ne 'cache-snapshot';
+
     ## Apply snapshot
 
     Vmprobe::Poller::poll({
         probe_name => 'cache::restore',
         args => {
              snapshot => $snapshot->{snapshot},
+             path => $snapshot->{path},
         },
     });
 

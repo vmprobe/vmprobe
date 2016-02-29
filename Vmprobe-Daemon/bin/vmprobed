@@ -2,13 +2,26 @@
 
 use common::sense;
 
-use AnyEvent::Loop; # FIXME: EV not playing nice with Net:OpenSSH (not detecting child exits?)
+
+
+BEGIN {
+    require File::ShareDir;
+    require DynaLoader;
+
+    my $libvmprobe_path = File::ShareDir::dist_dir('Vmprobe') . '/libvmprobe.so';
+    DynaLoader::dl_load_file($libvmprobe_path, 0x01);
+}
+
+
+
+use AnyEvent::Loop; # FIXME: EV not playing nice with Net:OpenSSH < 0.71
 #use EV;
 use AnyEvent;
 use Getopt::Long;
 
 use Vmprobe::Daemon::Config;
 use Vmprobe::Daemon::API;
+
 
 
 

@@ -5,9 +5,11 @@ use common::sense;
 use parent 'Vmprobe::Daemon::Entity';
 
 use Time::HiRes;
+use Callback::Frame;
 
 use Vmprobe::Util;
 use Vmprobe::Daemon::DB::Standby;
+use Vmprobe::Cache::Snapshot;
 
 
 
@@ -15,6 +17,7 @@ sub init {
     my ($self) = @_;
 
     $self->{standbys_by_id} = {};
+    $self->{state_by_id} = {};
 
     my $txn = $self->lmdb_env->BeginTxn();
 
@@ -36,6 +39,9 @@ sub load_standby_into_cache {
     my $id = $standby->{id};
 
     $self->{standbys_by_id}->{$id} = $standby;
+    $self->{state_by_id}->{$id} //= {};
+
+    $self->probe_primary($id);
 }
 
 
@@ -45,6 +51,75 @@ sub unload_standby_from_cache {
     my $id = $standby->{id};
 
     delete $self->{standbys_by_id}->{$id};
+    delete $self->{state_by_id}->{$id};
+}
+
+
+sub probe_primary {
+    my ($self, $id) = @_;
+say "PROBING PRIMARY!";
+
+    my $standby = $self->{standbys_by_id}->{$id};
+    my $state = $self->{state_by_id}->{$id};
+
+    delete $state->{watcher};
+
+    return if !defined $standby->{primary} || !@{ $standby->{paths} };
+
+    my $cv = AE::cv;
+
+    foreach my $path (@{ $standby->{paths} }) {
+        $cv->begin;
+
+        $state->{paths}->{$path} //= {};
+        my $path_state = $state->{paths}->{$path};
+
+        frame_try {
+            my $args = { path => $path };
+
+            if (defined $path_state->{delta} && defined $path_state->{snapshot} && defined $path_state->{connection_id}) {
+                $args->{delta} = $path_state->{delta};
+            } else {
+                delete $path_state->{connection_id};
+
+                $path_state->{delta} = get_session_token();
+                $args->{save} = $path_state->{delta};
+            }
+
+            $self->get_remote($standby->{primary})->probe('cache::snapshot', $args, sub {
+                $cv->end;
+                my ($res, $connection_id) = @_;
+
+                $path_state->{connection_id} = $connection_id;
+
+                if (defined $res->{delta}) {
+                    $path_state->{snapshot} = Vmprobe::Cache::Snapshot::delta($path_state->{snapshot}, $res->{delta});
+                } else {
+                    $path_state->{snapshot} = $res->{snapshot};
+                }
+
+say "OK!";
+use Data::Dumper; say Dumper($res);
+use Data::Dumper; say Dumper($path_state->{snapshot});
+            }, $path_state->{connection_id});
+        } frame_catch {
+            $cv->end;
+
+            my $error = $@;
+            chomp $error;
+            say STDERR "Failure: $error";
+
+            delete $path_state->{connection_id};
+            delete $path_state->{delta};
+            delete $path_state->{snapshot};
+        };
+    }
+
+    $cv->cb(sub {
+        $state->{watcher} = AE::timer 2, 2, sub {
+            $self->probe_primary($id);
+        };
+    })
 }
 
 

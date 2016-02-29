@@ -115,3 +115,36 @@ summarize(snapshot_sv, buckets)
         RETVAL = newRV((SV *)results);
     OUTPUT:
         RETVAL
+
+
+
+
+SV *
+delta(before_sv, after_sv)
+        SV *before_sv
+        SV *after_sv
+    CODE:
+        char *before_p;
+        size_t before_len;
+        char *after_p;
+        size_t after_len;
+        SV *output;
+
+        before_len = SvCUR(before_sv);
+        before_p = SvPV(before_sv, before_len);
+        after_len = SvCUR(after_sv);
+        after_p = SvPV(after_sv, after_len);
+
+        try {
+            vmprobe::cache::snapshot::builder b;
+
+            b.delta(before_p, before_len, after_p, after_len);
+
+            output = newSVpvn(b.buf.data(), b.buf.size());
+        } catch(std::runtime_error &e) {
+            croak(e.what());
+        }
+
+        RETVAL = output;
+    OUTPUT:
+        RETVAL

@@ -73,6 +73,13 @@ sub get_num_connections {
 }
 
 
+sub is_connection_alive {
+    my ($self, $connection_id) = @_;
+
+    return !!$self->{connections}->{$connection_id};
+}
+
+
 sub error_message {
     my ($self, $err_msg) = @_;
 
@@ -130,7 +137,15 @@ sub _connect_ssh {
     $self->set_state('ssh_wait');
 
     $self->{ssh_master_pipe} = Vmprobe::Util::capture_stderr {
-        $self->{ssh} = Net::OpenSSH->new($self->{host}, key_path => $Vmprobe::Remote::global_params->{ssh_private_key}, async => 1);
+        $self->{ssh} = Net::OpenSSH->new(
+                           $self->{host},
+                           key_path => $Vmprobe::Remote::global_params->{ssh_private_key},
+                           async => 1,
+                           master_opts => [
+                                              -o => 'StrictHostKeyChecking=yes',
+                                              -o => 'PasswordAuthentication=no',
+                                          ],
+                       );
     };
 
     $self->{ssh_master_pipe_output} = '';
@@ -192,6 +207,8 @@ sub _get_handle_cmd {
 sub _add_connection {
     my ($self) = @_;
 
+    $self->{num_connections}++;
+
     my $connection_id = get_session_token();
 
     my $cmd = $self->_get_handle_cmd;
@@ -203,8 +220,6 @@ sub _add_connection {
                      );
 
     $self->{connections}->{$connection_id} = $connection;
-
-    $self->{num_connections}++;
 
     $self->{on_state_change}->($self);
 }
@@ -302,6 +317,14 @@ sub _teardown_ssh_master {
     $self->{num_connections} = 0;
     $self->{connections} = {};
     $self->{idle_connections} = [];
+
+    foreach my $probe (@{ $self->{pending_probes} }) {
+        frame(existing_frame => $probe->{cb}, code => sub {
+            die "remote communication error: $err_msg";
+        })->();
+    }
+
+    $self->{pending_probes} = [];
 
     delete $self->{ssh_timer};
     delete $self->{ssh_master_pipe};
