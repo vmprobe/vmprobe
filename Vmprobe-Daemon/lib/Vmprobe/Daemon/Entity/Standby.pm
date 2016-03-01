@@ -80,8 +80,7 @@ sub probe_primary {
             } else {
                 delete $path_state->{connection_id};
 
-                $path_state->{diff} = get_session_token();
-                $args->{save} = $path_state->{diff};
+                $args->{save} = $path_state->{diff} = get_session_token();
             }
 
             $self->get_remote($standby->{primary})->probe('cache::snapshot', $args, sub {
@@ -112,7 +111,7 @@ sub probe_primary {
     }
 
     $cv->cb(sub {
-        $state->{watcher} = AE::timer $standby->{refresh}, $standby->{refresh}, sub {
+        $state->{watcher} = AE::timer $standby->{refresh}, 0, sub {
             $self->probe_primary($id);
         };
     })
@@ -130,30 +129,55 @@ sub copy_to_standbys {
 
     foreach my $remoteId (@{ $standby->{remoteIds} }) {
         next if $remoteId == $standby->{primary};
-        my $path_state_primary = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
 
         foreach my $path (@{ $standby->{paths} }) {
             $state->{paths}->{$path} //= {};
             my $path_state = ($state->{paths}->{$path}->{$remoteId} //= {});
+            my $primary_path_state = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
+
+            next if !defined $primary_path_state->{snapshot};
 
             frame_try {
                 my $args = { path => $path };
 
-                if (defined $path_state->{delta} && defined $path_state->{connection_id}) {
+                if (defined $$delta_ref && defined $path_state->{diff} && defined $path_state->{connection_id}) {
+                    $args->{diff} = $path_state->{diff};
+                    $args->{delta} = $$delta_ref;
+                } else {
+                    delete $path_state->{connection_id};
+                    delete $path_state->{diff};
+
+                    $args->{snapshot} = $primary_path_state->{snapshot};
+                    $args->{save} = $path_state->{diff} = get_session_token();
                 }
+
+                $self->get_remote($remoteId)->probe('cache::restore', $args, sub {
+                    my ($res, $connection_id) = @_;
+
+                    $path_state->{connection_id} = $connection_id;
+                }, $path_state->{connection_id});
             } frame_catch {
                 my $error = $@;
                 chomp $error;
                 say STDERR "copy_to_standbys error: $error";
 
                 delete $path_state->{connection_id};
-                delete $path_state->{delta};
+                delete $path_state->{diff};
             };
-say "BING $remoteId / $path";
-use Data::Dumper; print Dumper($path_state);
         }
     }
 }
+
+
+sub change_primary {
+    my ($self, $id) = @_;
+
+    my $state = $self->{state_by_id}->{$id};
+
+    delete $state->{paths};
+}
+
+
 
 
 
@@ -347,7 +371,11 @@ sub ENTRY_update_standby {
     Vmprobe::Daemon::DB::Standby->new($txn)->update($standby);
 
     $txn->commit;
+
     $self->load_standby_into_cache($standby);
+    if (defined $update->{primary}) {
+        $self->change_primary($id);
+    }
 
     return $standby;
 }
