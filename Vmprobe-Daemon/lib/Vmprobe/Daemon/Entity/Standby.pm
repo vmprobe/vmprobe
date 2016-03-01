@@ -57,7 +57,6 @@ sub unload_standby_from_cache {
 
 sub probe_primary {
     my ($self, $id) = @_;
-say "PROBING PRIMARY!";
 
     my $standby = $self->{standbys_by_id}->{$id};
     my $state = $self->{state_by_id}->{$id};
@@ -71,19 +70,18 @@ say "PROBING PRIMARY!";
     foreach my $path (@{ $standby->{paths} }) {
         $cv->begin;
 
-        $state->{paths}->{$path} //= {};
-        my $path_state = $state->{paths}->{$path};
+        my $path_state = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
 
         frame_try {
             my $args = { path => $path };
 
-            if (defined $path_state->{delta} && defined $path_state->{snapshot} && defined $path_state->{connection_id}) {
-                $args->{delta} = $path_state->{delta};
+            if (defined $path_state->{diff} && defined $path_state->{snapshot} && defined $path_state->{connection_id}) {
+                $args->{diff} = $path_state->{diff};
             } else {
                 delete $path_state->{connection_id};
 
-                $path_state->{delta} = get_session_token();
-                $args->{save} = $path_state->{delta};
+                $path_state->{diff} = get_session_token();
+                $args->{save} = $path_state->{diff};
             }
 
             $self->get_remote($standby->{primary})->probe('cache::snapshot', $args, sub {
@@ -98,16 +96,14 @@ say "PROBING PRIMARY!";
                     $path_state->{snapshot} = $res->{snapshot};
                 }
 
-say "OK!";
-use Data::Dumper; say Dumper($res);
-use Data::Dumper; say Dumper($path_state->{snapshot});
+                $self->copy_to_standbys($id);
             }, $path_state->{connection_id});
         } frame_catch {
             $cv->end;
 
             my $error = $@;
             chomp $error;
-            say STDERR "Failure: $error";
+            say STDERR "probe_primary error: $error";
 
             delete $path_state->{connection_id};
             delete $path_state->{delta};
@@ -116,11 +112,48 @@ use Data::Dumper; say Dumper($path_state->{snapshot});
     }
 
     $cv->cb(sub {
-        $state->{watcher} = AE::timer 2, 2, sub {
+        $state->{watcher} = AE::timer $standby->{refresh}, $standby->{refresh}, sub {
             $self->probe_primary($id);
         };
     })
 }
+
+
+
+sub copy_to_standbys {
+    my ($self, $id) = @_;
+
+    my $standby = $self->{standbys_by_id}->{$id};
+    my $state = $self->{state_by_id}->{$id};
+
+    return if !defined $standby->{primary} || !@{ $standby->{paths} };
+
+    foreach my $remoteId (@{ $standby->{remoteIds} }) {
+        next if $remoteId == $standby->{primary};
+
+        foreach my $path (@{ $standby->{paths} }) {
+            $state->{paths}->{$path} //= {};
+            my $path_state = ($state->{paths}->{$path}->{$remoteId} //= {});
+
+            frame_try {
+                my $args = { path => $path };
+
+                if (defined $path_state->{delta} && defined $path_state->{connection_id}) {
+                }
+            } frame_catch {
+                my $error = $@;
+                chomp $error;
+                say STDERR "copy_to_standbys error: $error";
+
+                delete $path_state->{connection_id};
+                delete $path_state->{delta};
+            };
+say "BING $remoteId / $path";
+use Data::Dumper; print Dumper($path_state);
+        }
+    }
+}
+
 
 
 sub remote_removed {
@@ -232,6 +265,10 @@ sub ENTRY_create_new_standby {
             if !grep { $standby->{primary} == $_ } @{ $standby->{remoteIds} };
     }
 
+    $standby->{refresh} = delete $c->params->{refresh} || 30;
+    $standby->{refresh} += 0.0;
+    return $c->err_bad_request("invalid refresh interval") if $standby->{refresh} < 0.1;
+
     $standby->{paths} = delete $c->params->{paths} || [];
     my $err = $self->validate_paths($standby);
     return $c->err_bad_request($err) if defined $err;
@@ -292,9 +329,16 @@ sub ENTRY_update_standby {
         $standby->{paths} = $update->{paths};
     }
 
-    return $c->err_bad_request("need to provide one or more params to update") if !keys(%$update);
+    if (defined $c->params->{refresh}) {
+        $update->{refresh} = delete $c->params->{refresh};
+        $update->{refresh} += 0.0;
+        return $c->err_bad_request("invalid refresh interval") if $update->{refresh} < 0.1;
+        $standby->{refresh} = $update->{refresh};
+    }
 
     return $c->err_unknown_params if $c->is_params_left;
+
+    return $c->err_bad_request("need to provide one or more params to update") if !keys(%$update);
 
 
     my $txn = $self->lmdb_env->BeginTxn();

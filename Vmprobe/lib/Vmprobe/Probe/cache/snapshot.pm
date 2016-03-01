@@ -9,7 +9,7 @@ sub run {
     my ($params) = @_;
 
     die "need path" if !defined $params->{path};
-    die "can't specify both save and delta" if defined $params->{save} && defined $params->{delta};
+    die "can't specify both save and diff" if defined $params->{save} && defined $params->{diff};
 
     my $snapshot = Vmprobe::Cache::Snapshot::take($params->{path});
 
@@ -17,13 +17,13 @@ sub run {
         $Vmprobe::Cache::snapshots->{$params->{save}} = $snapshot;
     }
 
-    if (defined $params->{delta}) {
-        my $before = $Vmprobe::Cache::snapshots->{$params->{delta}};
-        die "unknown snapshot id: $params->{delta}" if !defined $before;
+    if (defined $params->{diff}) {
+        my $before = $Vmprobe::Cache::snapshots->{$params->{diff}};
+        die "unknown snapshot id: $params->{diff}" if !defined $before;
 
         my $delta = Vmprobe::Cache::Snapshot::delta($before, $snapshot);
 
-        $Vmprobe::Cache::snapshots->{$params->{delta}} = $snapshot;
+        $Vmprobe::Cache::snapshots->{$params->{diff}} = $snapshot;
 
         return { delta => $delta };
     }
