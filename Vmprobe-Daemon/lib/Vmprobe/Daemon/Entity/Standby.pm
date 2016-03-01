@@ -96,7 +96,7 @@ sub probe_primary {
                     $path_state->{snapshot} = $res->{snapshot};
                 }
 
-                $self->copy_to_standbys($id);
+                $self->copy_to_standbys($id, \$res->{delta});
             }, $path_state->{connection_id});
         } frame_catch {
             $cv->end;
@@ -106,7 +106,7 @@ sub probe_primary {
             say STDERR "probe_primary error: $error";
 
             delete $path_state->{connection_id};
-            delete $path_state->{delta};
+            delete $path_state->{diff};
             delete $path_state->{snapshot};
         };
     }
@@ -121,7 +121,7 @@ sub probe_primary {
 
 
 sub copy_to_standbys {
-    my ($self, $id) = @_;
+    my ($self, $id, $delta_ref) = @_;
 
     my $standby = $self->{standbys_by_id}->{$id};
     my $state = $self->{state_by_id}->{$id};
@@ -130,6 +130,7 @@ sub copy_to_standbys {
 
     foreach my $remoteId (@{ $standby->{remoteIds} }) {
         next if $remoteId == $standby->{primary};
+        my $path_state_primary = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
 
         foreach my $path (@{ $standby->{paths} }) {
             $state->{paths}->{$path} //= {};

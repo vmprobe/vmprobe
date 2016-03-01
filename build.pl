@@ -182,8 +182,8 @@ sub prepare_perl_dir_for_cpan {
     my $dir = shift;
 
     sys("cd $dir && perl Build.PL");
-    sys("cd $dir && perl Build");
-    sys("cd $dir && perl Build test");
+    #sys("cd $dir && perl Build");
+    #sys("cd $dir && perl Build test");
     sys("cd $dir && perl Build realclean");
 
     die "untracked files in $dir perl directory"
