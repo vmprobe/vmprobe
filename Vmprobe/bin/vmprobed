@@ -3,17 +3,6 @@
 use common::sense;
 
 
-
-BEGIN {
-    require File::ShareDir;
-    require DynaLoader;
-
-    my $libvmprobe_path = File::ShareDir::dist_dir('Vmprobe') . '/libvmprobe.so';
-    DynaLoader::dl_load_file($libvmprobe_path, 0x01);
-}
-
-
-
 use AnyEvent::Loop; # FIXME: EV not playing nice with Net:OpenSSH < 0.71
 #use EV;
 use AnyEvent;
@@ -24,18 +13,12 @@ use Vmprobe::Daemon::API;
 
 
 
-
-
 my $config_file = '/etc/vmprobed/vmprobed.conf';
 
 GetOptions("config|c=s" => \$config_file)
     || die "error in command-line arguments";
 
 Vmprobe::Daemon::Config::load_config($config_file);
-
-
-
-
 
 
 

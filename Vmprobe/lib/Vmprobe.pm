@@ -1,6 +1,6 @@
 package Vmprobe;
 
-our $VERSION = 'REPO_DEV_MODE';
+our $VERSION = 'PLACEHOLDER';
 
 1;
 
