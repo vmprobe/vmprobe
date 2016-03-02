@@ -14,10 +14,11 @@ my %module_build_args = (
   script_files => [ 'bin/vmprobe' ],
 
   build_requires => {
-    'Module::Build' => '0.4214'
+    'Module::Build' => '0.4214',
+    'PAR::Packer' => '1.029',
   },
   configure_requires => {
-    'Module::Build' => '0.4214'
+    'Module::Build' => '0.4214',
   },
   requires => {
     ## Common

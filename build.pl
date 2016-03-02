@@ -8,13 +8,10 @@ my $cmd_specs = [
     cmd => 'quick-dev',
     doc => q{Get ready for development on vmprobe! (Please be patient...)
              * Installs CPAN dependencies globally (requires sudo)
-             * Installs npm dependencies locally
              * Builds the Vmprobe perl mode in "repo dev mode"
            },
     run => sub {
       install_cpan_deps_global();
-      install_npm_deps();
-      build_perl_dev_mode();
     },
   },
   {
@@ -25,34 +22,40 @@ my $cmd_specs = [
             },
     run => sub {
       install_cpan_deps_local();
-      install_npm_deps();
-      build_perl_dev_mode();
     },
   },
   {
-    cmd => 'cpan-vmprobe',
-    doc => q{Create a Vmprobe distribution ready for CPAN in the cpan-dist-dir/ directory},
+    cmd => 'build',
+    doc => q{Builds packed binaries in the Vmprobe directory},
     run => sub {
-      prepare_perl_dir_for_cpan('Vmprobe');
-      clean_libvmprobe();
+      build_perl();
+      welcome_msg();
+    },
+  },
+  {
+    cmd => 'dist-vmprobe',
+    doc => q{Create packages for vmprobe},
+    run => sub {
+      build_perl();
 
-      sys('mkdir -p cpan-dist-dir');
-      sys('rm -rf cpan-dist-dir/Vmprobe');
-      sys('cp -L -R Vmprobe/ cpan-dist-dir/');
-      sys('cp COPYING cpan-dist-dir/Vmprobe/');
-
-      install_version('cpan-dist-dir/Vmprobe/lib/Vmprobe.pm', get_vmprobe_version('Vmprobe'));
-      install_version('cpan-dist-dir/Vmprobe/bin/vmprobe', get_vmprobe_version('Vmprobe'));
-
-      sys('cd cpan-dist-dir/Vmprobe/ && perl Build.PL && perl Build manifest');
-      sys('cd cpan-dist-dir/Vmprobe/ && perl Build dist');
+      fpm({
+        types => [qw/ deb rpm /],
+        name => 'vmprobe',
+        version => get_vmprobe_version('vmprobe'),
+        files => {
+          'Vmprobe/vmprobe' => '/usr/bin/vmprobe',
+        },
+        description => 'System probing tool for virtual memory and more',
+        changelog => 'Vmprobe/Changes',
+      });
     },
   },
   {
     cmd => 'version',
     doc => q{Prints the version of vmprobe.},
     run => sub {
-      print "Vmprobe: " . get_vmprobe_version('Vmprobe'), "\n";
+      print "vmprobe: " . get_vmprobe_version('vmprobe'), "\n";
+      print "vmprobed: " . get_vmprobe_version('vmprobed'), "\n";
     },
   },
   {
@@ -143,13 +146,11 @@ sub check_cpanm_avail {
     }
 }
 
-sub install_npm_deps {
-    sys('cd web && npm install');
+sub build_perl {
+    sys('cd Vmprobe/ && perl Build.PL && perl Build');
 }
 
-sub build_perl_dev_mode {
-    sys('cd Vmprobe/ && perl Build.PL && perl Build');
-
+sub welcome_msg {
     print <<'END';
 
 ===========================================================================
@@ -158,48 +159,79 @@ vmprobe is ready for development!
 
 You can run the command-line utility like so:
 
-./Vmprobe/bin/vmprobe
+./Vmprobe/vmprobe
 
-Start up the web-server (including the hot-load react development server):
+And the daemon like so:
 
-./Vmprobe/bin/vmprobe web
+mkdir /tmp/vmprobed
+./Vmprobe/vmprobed -c Vmprobe/etc/vmprobed.conf
 
 END
 }
 
-sub build_libvmprobe {
-    sys('cd libvmprobe/ && make -j 4');
-}
 
-sub clean_libvmprobe {
-    sys('cd libvmprobe/ && make clean');
 
-    die "untracked files in libvmprobe/ directory"
-        if `cd libvmprobe/ && git clean -nxd .`;
-}
+sub fpm {
+    my $args = shift;
 
-sub prepare_perl_dir_for_cpan {
-    my $dir = shift;
+    $args->{url} //= 'https://vmprobe.com';
+    $args->{license} //= 'GPL version 3';
+    $args->{maintainer} //= 'Vmprobe Team <support@vmprobe.com>';
 
-    sys("cd $dir && perl Build.PL");
-    #sys("cd $dir && perl Build");
-    #sys("cd $dir && perl Build test");
-    sys("cd $dir && perl Build realclean");
+    my $changelog_path = `realpath $args->{changelog}`;
+    chomp $changelog_path;
 
-    die "untracked files in $dir perl directory"
-        if `cd $dir && git clean -nxd .`;
-}
+    die "need to install fpm ( https://github.com/jordansissel/fpm )"
+        if !`which fpm`;
 
-sub build_web_resources {
-    if (!-e 'web/node_modules/') {
-        die "no web/node_modules/ (forgot to install npm deps?)";
+    require File::Temp;
+    my $tmp = File::Temp::tempdir(CLEANUP => 1);
+
+    sys("mkdir -p dist");
+
+    foreach my $type (@{ $args->{types} }) {
+        foreach my $src (keys %{ $args->{files} }) {
+            my $dest = "$tmp/$args->{files}->{$src}";
+
+            my $dest_path = $dest;
+            $dest_path =~ s{[^/]+\z}{};
+
+            sys("mkdir -p $dest_path") if !-d $dest_path;
+            sys("cp $src $dest");
+        }
+
+        my $changelog = '';
+
+        if ($type eq 'deb') {
+            $changelog = qq{ --deb-changelog "$changelog_path" };
+        } elsif ($type eq 'rpm') {
+            ## FIXME: fpm breaks?
+            #$changelog = qq{ --rpm-changelog "$changelog_path" };
+        }
+
+        my $cmd = qq{
+            cd dist ; fpm
+              -n "$args->{name}"
+              -s dir -t $type
+              -v $args->{version}
+
+              --url "$args->{url}"
+              --description "$args->{description}"
+              --license "$args->{license}"
+              --maintainer "$args->{maintainer}"
+              --vendor ''
+
+              $changelog
+
+              -f -C $tmp .
+        };
+
+        $cmd =~ s/\s+/ /g;
+        $cmd =~ s/^\s*//;
+
+        sys($cmd);
     }
-
-    sys('rm -rf web/dist/');
-    sys('cd web && npm run dist');
-    sys('cp web/index.html web/dist/');
 }
-
 
 
 sub sys {
@@ -224,22 +256,4 @@ sub get_vmprobe_version {
     $version_cache->{$dist} =~ s/^$dist-//;
 
     return $version_cache->{$dist};
-}
-
-
-sub install_version {
-    my ($file, $version) = @_;
-
-    my $contents;
-
-    {
-        open(my $fh, '<', $file) || die "couldn't open $file for reading: $!";
-        local $/;
-        $contents = <$fh>;
-    }
-
-    $contents =~ s{VERSION = 'REPO_DEV_MODE';}{VERSION = '$version';};
-
-    open(my $fh, '>', $file) || die "couldn't open $file for writing: $!";
-    print $fh $contents;
 }
