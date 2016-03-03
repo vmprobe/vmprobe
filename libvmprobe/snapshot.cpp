@@ -286,7 +286,7 @@ static void restore_residency_state(uint64_t bucket_size, vmprobe::cache::file &
 
     size_t mem_len = file.get_size();
 
-    file.advise(advice::RANDOM);
+    file.advise(advice::SEQUENTIAL);
 
     for (uint64_t i=0; i < bf.num_buckets; i++) {
         int bit_state = bf.get_bit(i);
