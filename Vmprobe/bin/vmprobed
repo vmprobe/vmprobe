@@ -3,13 +3,18 @@
 use common::sense;
 
 
-use AnyEvent::Loop; # FIXME: EV not playing nice with Net:OpenSSH < 0.71
+use AnyEvent::Loop; # FIXME: EV not playing nice with Net::OpenSSH < 0.71
 #use EV;
 use AnyEvent;
 use Getopt::Long;
 
-use Vmprobe::Daemon::Config;
+use Vmprobe::Daemon::Util;
 use Vmprobe::Daemon::API;
+
+
+
+die "must not run as root"
+    if $< == 0 || $> == 0;
 
 
 
@@ -21,8 +26,7 @@ GetOptions(
     'nodaemon' => \$nodaemon,
 ) || die "error in command-line arguments";
 
-Vmprobe::Daemon::Config::load_config($config_file);
-
+Vmprobe::Daemon::Util::load_config($config_file);
 
 
 

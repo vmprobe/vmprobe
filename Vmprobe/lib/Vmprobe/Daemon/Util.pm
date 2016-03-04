@@ -1,4 +1,4 @@
-package Vmprobe::Daemon::Config;
+package Vmprobe::Daemon::Util;
 
 use common::sense;
 

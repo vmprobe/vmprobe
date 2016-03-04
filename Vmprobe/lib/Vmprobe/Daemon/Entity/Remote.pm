@@ -5,7 +5,7 @@ use common::sense;
 use parent 'Vmprobe::Daemon::Entity';
 
 use Vmprobe::Remote;
-use Vmprobe::Daemon::Config;
+use Vmprobe::Daemon::Util;
 use Vmprobe::Daemon::DB::Remote;
 
 

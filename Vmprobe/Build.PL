@@ -11,7 +11,7 @@ my %module_build_args = (
   dist_author => [ 'Doug Hoyte <doug@hcsw.org>' ],
   license => 'gpl3',
 
-  script_files => [ 'bin/vmprobe' ],
+  script_files => [ 'bin/vmprobe', 'bin/vmprobed', ],
 
   build_requires => {
     'Module::Build' => '0.4214',

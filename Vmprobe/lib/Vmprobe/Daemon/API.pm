@@ -8,7 +8,7 @@ use Plack::Middleware::ContentLength;
 use Plack::Middleware::Deflater;
 
 use Vmprobe::Util;
-use Vmprobe::Daemon::Config;
+use Vmprobe::Daemon::Util;
 use Vmprobe::Daemon::Router;
 
 use Vmprobe::Daemon::DB::Global;

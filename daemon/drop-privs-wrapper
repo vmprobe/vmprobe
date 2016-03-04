@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ "$EUID" -ne 0 ]
+  then echo "vmprobed must be run as root so it can drop privileges to vmprobed user"
+  exit 1
+fi
+
+exec sudo -u vmprobed -- vmprobed-noroot "$@"

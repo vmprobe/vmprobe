@@ -63,7 +63,8 @@ my $cmd_specs = [
         name => 'vmprobed',
         version => get_vmprobe_version('vmprobed'),
         files => {
-            'Vmprobe/vmprobed' => '/usr/bin/vmprobed',
+            'daemon/drop-privs-wrapper' => '/usr/bin/vmprobed',
+            'Vmprobe/vmprobed' => '/usr/bin/vmprobed-noroot',
             'daemon/vmprobed.conf' => '/etc/vmprobed/vmprobed.conf',
         },
         dirs => [
