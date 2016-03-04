@@ -14,11 +14,16 @@ use Vmprobe::Daemon::API;
 
 
 my $config_file = '/etc/vmprobed/vmprobed.conf';
+my $nodaemon;
 
-GetOptions("config|c=s" => \$config_file)
-    || die "error in command-line arguments";
+GetOptions(
+    'config|c=s' => \$config_file,
+    'nodaemon' => \$nodaemon,
+) || die "error in command-line arguments";
 
 Vmprobe::Daemon::Config::load_config($config_file);
+
+
 
 
 

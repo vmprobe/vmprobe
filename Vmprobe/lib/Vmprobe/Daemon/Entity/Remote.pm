@@ -5,6 +5,7 @@ use common::sense;
 use parent 'Vmprobe::Daemon::Entity';
 
 use Vmprobe::Remote;
+use Vmprobe::Daemon::Config;
 use Vmprobe::Daemon::DB::Remote;
 
 
@@ -43,6 +44,7 @@ sub load_remote_into_cache {
             ssh_to_localhost => 1,
             host => $remote->{host},
             on_state_change => sub {},
+            max_connections => config->{remotes}->{max_connections_per_remote} || 3,
         );
 }
 

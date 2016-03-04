@@ -19,6 +19,7 @@ my %module_build_args = (
   },
   configure_requires => {
     'Module::Build' => '0.4214',
+    'Alien::LMDB' => 0,
   },
   requires => {
     ## Common

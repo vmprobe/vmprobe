@@ -61,9 +61,14 @@ sub bundle_vmprobe {
 
 
 sub bundle_vmprobe_daemon {
-    pp_wrapper(q{
+    require Alien::LMDB;
+
+    my $liblmdb_path = Alien::LMDB->new->dist_dir() . "/lib/liblmdb.so";
+
+    pp_wrapper(qq{
         bin/vmprobed
         -l ../libvmprobe/libvmprobe.so
+        -l $liblmdb_path
 
         -M Net::OpenSSH::
 

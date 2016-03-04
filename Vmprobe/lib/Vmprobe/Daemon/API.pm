@@ -86,17 +86,17 @@ sub start_service {
     $app = Plack::Middleware::Deflater->wrap($app, content_type => [qw{application/json application/javascript text/html text/plain}]);
 
 
-    my $ip = config->{api}->{ip} || '127.0.0.1';
+    my $host = config->{api}->{host} || '127.0.0.1';
     my $port = config->{api}->{port} || 7600;
 
     my $server = Twiggy::Server->new(
-        host => $ip,
+        host => $host,
         port => $port,
     );
 
     $server->register_service($app);
 
-    say "API Listening on http://$ip:$port";
+    say "API Listening on http://$host:$port";
 }
 
 

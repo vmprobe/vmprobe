@@ -2,6 +2,8 @@
 
 use strict;
 
+use Cwd;
+
 
 my $cmd_specs = [
   {
@@ -47,6 +49,29 @@ my $cmd_specs = [
         },
         description => 'System probing tool for virtual memory and more',
         changelog => 'Vmprobe/Changes',
+      });
+    },
+  },
+  {
+    cmd => 'dist-vmprobed',
+    doc => q{Create packages for vmprobed},
+    run => sub {
+      build_perl();
+
+      fpm({
+        types => [qw/ deb rpm /],
+        name => 'vmprobed',
+        version => get_vmprobe_version('vmprobed'),
+        files => {
+            'Vmprobe/vmprobed' => '/usr/bin/vmprobed',
+            'daemon/vmprobed.conf' => '/etc/vmprobed/vmprobed.conf',
+        },
+        dirs => [
+            '/var/vmprobed',
+        ],
+        description => 'Daemon for managing vmprobe instances',
+        changelog => 'Vmprobe/Changes',
+        postinst => 'daemon/postinst',
       });
     },
   },
@@ -174,12 +199,11 @@ END
 sub fpm {
     my $args = shift;
 
+    my $cwd = cwd();
+
     $args->{url} //= 'https://vmprobe.com';
     $args->{license} //= 'GPL version 3';
     $args->{maintainer} //= 'Vmprobe Team <support@vmprobe.com>';
-
-    my $changelog_path = `realpath $args->{changelog}`;
-    chomp $changelog_path;
 
     die "need to install fpm ( https://github.com/jordansissel/fpm )"
         if !`which fpm`;
@@ -200,14 +224,33 @@ sub fpm {
             sys("cp $src $dest");
         }
 
+        foreach my $dir (@{ $args->{dirs} }) {
+            sys("mkdir -p $tmp/$dir");
+        }
+
+
         my $changelog = '';
 
-        if ($type eq 'deb') {
-            $changelog = qq{ --deb-changelog "$changelog_path" };
-        } elsif ($type eq 'rpm') {
-            ## FIXME: fpm breaks?
-            #$changelog = qq{ --rpm-changelog "$changelog_path" };
+        if (exists $args->{postinst}) {
+            my $changelog_path = "$cwd/$args->{changelog}";
+
+            if ($type eq 'deb') {
+                $changelog = qq{ --deb-changelog "$changelog_path" };
+            } elsif ($type eq 'rpm') {
+                ## FIXME: fpm breaks?
+                #$changelog = qq{ --rpm-changelog "$changelog_path" };
+            } else {
+                die "unknown type: $type";
+            }
         }
+
+
+        my $postinst = '';
+
+        if (exists $args->{postinst}) {
+            $postinst = qq{ --after-install "$cwd/$args->{postinst}" };
+        }
+
 
         my $cmd = qq{
             cd dist ; fpm
@@ -222,6 +265,7 @@ sub fpm {
               --vendor ''
 
               $changelog
+              $postinst
 
               -f -C $tmp .
         };

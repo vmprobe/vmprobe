@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -e
+
+if ! getent passwd | grep -q "^vmprobed:" ; then
+    echo
+    echo "Adding user and group 'vmprobed'"
+    echo
+    useradd -r -m -k /dev/null -U -s /bin/false vmprobed
+fi
+
+chown vmprobed:vmprobed /var/vmprobed
+
+if ! [ -e ~vmprobed/.ssh/id_rsa ]; then
+    echo
+    echo "Generating SSH key-pair for vmprobed user"
+    echo
+    mkdir ~vmprobed/.ssh
+    chmod 700 ~vmprobed/.ssh
+    ssh-keygen -t rsa -N '' -f ~vmprobed/.ssh/id_rsa
+    chown -R vmprobed:vmprobed ~vmprobed/.ssh/
+fi
