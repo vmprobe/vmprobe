@@ -129,7 +129,7 @@ void crawler::_crawl(std::string &path_std_string) {
             std::string npath = path_std_string + std::string("/") + s;
 
             curr_crawl_depth++;
-            crawl(npath);
+            _crawl(npath);
             curr_crawl_depth--;
         }
     } else if (S_ISREG(sb.st_mode)) {
