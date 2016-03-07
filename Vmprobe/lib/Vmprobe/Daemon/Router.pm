@@ -58,8 +58,34 @@ sub _compile {
 sub route {
     my ($self, $env) = @_;
 
+    my $logger = $self->{api}->get_logger;
+
+    my $ret;
+
+    eval {
+        $ret = $self->route_aux($env, $logger);
+    };
+
+    if ($@) {
+        my $err = "Internal server error: $@";
+        $logger->error($err);
+        $ret = $self->error($err);
+    }
+
+    $logger->data->{status} = $ret->[0];
+    $logger->info("HTTP status: $ret->[0]");
+
+    return $ret;
+}
+
+
+sub route_aux {
+    my ($self, $env, $logger) = @_;
+
     my $path = $env->{PATH_INFO};
     $path = '/' if $path eq '';
+
+    $logger->info("Request from $env->{REMOTE_ADDR} - $env->{REQUEST_METHOD} $path");
 
     $self->_compile() if !exists $self->{re};
 
@@ -104,10 +130,15 @@ sub route {
         res => $res,
         url_args => $url_args,
         params => $params,
+        logger => $logger,
     );
 
     my $handle_content = sub {
         my $content = shift;
+
+        if ($res->status != 200) {
+            $logger->warn("Bad request: $content->{error}");
+        }
 
         if (ref $content) {
             $res->content_type('application/json');
@@ -129,7 +160,7 @@ sub route {
     };
 
     if ($@) {
-        say STDERR "Caught exception: $@";
+        $logger->error("Caught exception: $@");
         return $self->error(500, "internal server error: $@");
     }
 
@@ -142,7 +173,7 @@ sub route {
             frame_try {
                 $content->($wrapped_responder);
             } frame_catch {
-                say STDERR "Caught exception: $@";
+                $logger->error("Caught exception from callback: $@");
                 $responder->($self->error(500, "internal server error: $@"));
             };
 

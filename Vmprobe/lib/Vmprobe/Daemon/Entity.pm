@@ -11,7 +11,7 @@ sub new {
 
     $self->{api} = $args{api};
 
-    $self->init();
+    $self->init($args{logger});
 
     return $self;
 }
@@ -29,6 +29,12 @@ sub lmdb_env {
     my ($self) = @_;
 
     return $self->{api}->{lmdb};
+}
+
+sub get_logger {
+    my ($self) = @_;
+
+    return $self->{api}->get_logger;
 }
 
 

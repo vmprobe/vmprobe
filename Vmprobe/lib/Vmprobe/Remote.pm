@@ -26,8 +26,10 @@ sub new {
 
     $self->{host} = $args{host};
     $self->{on_state_change} = $args{on_state_change} // sub {};
+    $self->{on_error_message} = $args{on_error_message};
+    $self->{on_connection_established} = $args{on_connection_established} // sub {};
     $self->{max_connections} = $args{max_connections} // 3;
-    $self->{reconnection_interval} = $args{reconnection_interval} // 5;
+    $self->{reconnection_interval} = $args{reconnection_interval} // 30;
     $self->{collect_version_info} = $args{collect_version_info} // 1;
     $self->{ssh_to_localhost} = $args{ssh_to_localhost} // 0;
 
@@ -83,7 +85,11 @@ sub is_connection_alive {
 sub error_message {
     my ($self, $err_msg) = @_;
 
-    say STDERR "$self->{host} error: $err_msg";
+    if ($self->{on_error_message}) {
+        $self->{on_error_message}->($err_msg);
+    } else {
+        say STDERR "$self->{host} error: $err_msg";
+    }
 
     $self->{last_error_message} = $err_msg;
     $self->{on_state_change}->($self);
@@ -104,12 +110,10 @@ sub refresh_version_info {
         $self->probe('version', {}, sub {
             my ($version) = @_;
             $self->add_version_info($version);
+            $self->{on_connection_established}->();
         });
     } frame_catch {
-        my $err_msg = "error refreshing version info: $@";
-        say STDERR $err_msg;
-        $self->error_message($err_msg);
-        #$self->_teardown_ssh_master($err_msg);
+        ## Ignore
     };
 }
 

@@ -14,7 +14,7 @@ use Vmprobe::Cache::Snapshot;
 
 
 sub init {
-    my ($self) = @_;
+    my ($self, $logger) = @_;
 
     $self->{standbys_by_id} = {};
     $self->{state_by_id} = {};
@@ -26,6 +26,8 @@ sub init {
         my $standby = shift;
 
         $self->load_standby_into_cache($standby);
+        $logger->info("Activating standby $standby->{id}");
+        $logger->data->{standby} = $standby;
     });
 
     $txn->commit;
@@ -309,6 +311,9 @@ sub ENTRY_create_new_standby {
 
     $txn->commit;
 
+    $c->logger->info("Created new standby $standby->{id}");
+    $c->logger->data->{standby} = $standby;
+
     return $standby;
 }
 
@@ -337,6 +342,7 @@ sub ENTRY_update_standby {
         $update->{remoteIds} = delete $c->params->{remoteIds};
         my $err = $self->validate_remoteIds($update);
         return $c->err_bad_request($err) if defined $err;
+        $c->logger->info("Updated remoteIds from [" . join(',', @{ $standby->{remoteIds} }) . "] to [" . join(',', @{ $update->{remoteIds} }) . "]");
         $standby->{remoteIds} = $update->{remoteIds};
     }
 
@@ -344,6 +350,7 @@ sub ENTRY_update_standby {
         $update->{primary} = delete $c->params->{primary};
         return $c->err_bad_request("primary not a member of remoteIds")
             if !grep { $update->{primary} == $_ } @{ $standby->{remoteIds} };
+        $c->logger->info("Changed primary from remoteId $standby->{primary} to $update->{primary}");
         $standby->{primary} = $update->{primary};
     }
 
@@ -351,6 +358,7 @@ sub ENTRY_update_standby {
         $update->{paths} = delete $c->params->{paths};
         my $err = $self->validate_paths($update);
         return $c->err_bad_request($err) if defined $err;
+        $c->logger->info("Updated paths from [" . join(',', @{ $standby->{paths} }) . "] to [" . join(',', @{ $update->{paths} }) . "]");
         $standby->{paths} = $update->{paths};
     }
 
@@ -358,6 +366,7 @@ sub ENTRY_update_standby {
         $update->{refresh} = delete $c->params->{refresh};
         $update->{refresh} += 0.0;
         return $c->err_bad_request("invalid refresh interval") if $update->{refresh} < 0.1;
+        $c->logger->info("Changed refresh interval from $standby->{refresh} to $update->{refresh}");
         $standby->{refresh} = $update->{refresh};
     }
 
@@ -398,6 +407,8 @@ sub ENTRY_delete_standby {
     $self->unload_standby_from_cache($standby);
 
     $txn->commit;
+
+    $c->logger->info("Removed standby $id");
 
     return {};
 }

@@ -11,7 +11,7 @@ use Vmprobe::Daemon::DB::Remote;
 
 
 sub init {
-    my ($self) = @_;
+    my ($self, $logger) = @_;
 
     $self->{remotes_by_id} = {};
     $self->{remote_ids_by_host} = {};
@@ -23,6 +23,7 @@ sub init {
         my $key = shift;
         my $remote = shift;
 
+        $logger->info("Activating remote $remote->{id} ($remote->{host})");
         $self->load_remote_into_cache($remote);
     });
 
@@ -32,19 +33,31 @@ sub init {
 
 
 sub load_remote_into_cache {
-    my ($self, $remote) = @_;
+    my ($self, $remote, $logger) = @_;
 
     my $id = $remote->{id};
+    my $host = $remote->{host};
 
     $self->{remotes_by_id}->{$id} = $remote;
-    $self->{remote_ids_by_host}->{$remote->{host}} = $id;
+    $self->{remote_ids_by_host}->{$host} = $id;
 
     $self->{remote_objs_by_id}->{$id} =
         Vmprobe::Remote->new(
             ssh_to_localhost => 1,
-            host => $remote->{host},
-            on_state_change => sub {},
+            host => $host,
             max_connections => config->{remotes}->{max_connections_per_remote} || 3,
+            reconnection_interval => config->{remotes}->{reconnection_interval} || 30,
+            on_state_change => sub {},
+            on_error_message => sub {
+                my $err_msg = shift;
+                $self->get_logger->error("Remote error on $id ($host): $err_msg");
+            },
+            on_connection_established => sub {
+                my $remote_obj = $self->{remote_objs_by_id}->{$id};
+                my $logger = $self->get_logger;
+                $logger->info("Connection established on $id ($host)");
+                $logger->data->{version_info} = $remote_obj->{version_info};
+            }
         );
 }
 
@@ -141,6 +154,8 @@ sub ENTRY_create_new_remote {
 
     $txn->commit;
 
+    $c->logger->info("Create new remote $remote->{id} ($remote->{host})");
+
     return $remote;
 }
 
@@ -163,6 +178,8 @@ sub ENTRY_delete_remote {
     $self->unload_remote_from_cache($remote);
 
     $txn->commit;
+
+    $c->logger->info("Removed remote $id ($remote->{host})");
 
     return {};
 }

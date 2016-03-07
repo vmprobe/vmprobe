@@ -17,6 +17,7 @@ sub req { shift->{req} }
 sub res { shift->{res} }
 sub url_args { shift->{url_args} }
 sub params { shift->{params} }
+sub logger { shift->{logger} }
 
 
 sub err_bad_request {

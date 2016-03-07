@@ -27,6 +27,9 @@ sub ENTRY_take_snapshot {
     my $remote = $self->get_remote($params->{remoteId});
     return $c->err_bad_request("no such remoteId") if !$remote;
 
+    $c->logger->info("Taking snapshot of remote $params->{remoteId}, path $params->{path}");
+    my $timer = $c->logger->timer('probe');
+
     return sub {
         my $responder = shift;
 
@@ -39,6 +42,8 @@ sub ENTRY_take_snapshot {
             },
             sub {
                 my ($res) = @_;
+
+                undef $timer;
 
                 my $end_time = Time::HiRes::time();
 
@@ -55,6 +60,8 @@ sub ENTRY_take_snapshot {
                 Vmprobe::Daemon::DB::Snapshot->new($txn)->insert($to_save);
 
                 $txn->commit;
+
+                $c->logger->info("Snapshot id: $to_save->{id}");
 
                 $responder->({ snapshotId => $to_save->{id} });
             }
@@ -82,13 +89,19 @@ sub ENTRY_restore_snapshot {
 
     my $remote;
 
+    $c->logger->info("Restoring snapshot $params->{snapshotId}, path $snapshot->{path}");
+
     if (exists $params->{remoteId}) {
+        $c->logger->info("Restoring to remoteId $params->{remoteId}");
         $remote = $self->get_remote($params->{remoteId});
         return $c->err_bad_request("no such remoteId") if !$remote;
     } else {
+        $c->logger->info("No remote specified, assuming remote from snapshot, $snapshot->{remoteId}");
         $remote = $self->get_remote($snapshot->{remoteId});
         return $c->err_bad_request("remoteId in snapshot has been deleted, please specify new remoteId") if !$remote;
     }
+
+    my $timer = $c->logger->timer('probe');
 
     return sub {
         my $responder = shift;
@@ -101,6 +114,9 @@ sub ENTRY_restore_snapshot {
             },
             sub {
                 my ($res) = @_;
+
+                undef $timer;
+                $c->logger->info("Restore complete");
 
                 $responder->({});
             },
