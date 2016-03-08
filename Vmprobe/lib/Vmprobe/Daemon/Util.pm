@@ -5,6 +5,8 @@ use common::sense;
 use Exporter 'import';
 our @EXPORT = qw(config);
 
+use POSIX qw();
+
 
 our $config;
 
@@ -32,6 +34,26 @@ sub config() {
     die "config not loaded" if !defined $config;
 
     return $config;
+}
+
+
+
+
+sub daemonize {
+    my $ret = fork();
+
+    die "unable to fork while daemonizing: $!"
+        if !defined $ret;
+
+    exit if $ret;
+
+    POSIX::setsid();
+
+    open(STDIN, '<', '/dev/null');
+    open(STDOUT, '>', '/dev/null');
+    open(STDERR, '>', '/dev/null');
+
+    chdir(config->{var_dir});
 }
 
 

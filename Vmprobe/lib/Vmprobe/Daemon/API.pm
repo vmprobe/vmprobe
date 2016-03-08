@@ -2,6 +2,8 @@ package Vmprobe::Daemon::API;
 
 use common::sense;
 
+use EV;
+use AnyEvent;
 use LMDB_File;
 use Twiggy::Server;
 use Plack::Middleware::ContentLength;
@@ -36,6 +38,8 @@ sub new {
 
     $self->_open_logger();
 
+    Vmprobe::Daemon::Util::daemonize() unless $self->{nodaemon};
+
     my $logger = $self->get_logger;
 
     $logger->info("vmprobed started, pid $$");
@@ -45,15 +49,21 @@ sub new {
     eval {
         $self->_open_db($logger);
         $self->_create_entities($logger);
+
         $self->_start_service($logger);
     };
 
     if ($@) {
         $logger->error("Erroring starting vmprobed: $@");
+        $logger->error("vmprobed unable to run, shutting down");
         die $@;
     }
 
     return $self;
+}
+
+sub run {
+    AE::cv->recv;
 }
 
 

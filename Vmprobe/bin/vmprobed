@@ -2,10 +2,6 @@
 
 use common::sense;
 
-
-use AnyEvent::Loop; # FIXME: EV not playing nice with Net::OpenSSH < 0.71
-#use EV;
-use AnyEvent;
 use Getopt::Long;
 
 use Vmprobe::Daemon;
@@ -54,10 +50,6 @@ Vmprobe::Daemon::Util::load_config($o->{config_file});
 
 
 
-my $api;
+my $api = Vmprobe::Daemon::API->new(%$o);
 
-if (config->{api}) {
-    $api = Vmprobe::Daemon::API->new(%$o);
-}
-
-AE::cv->recv;
+$api->run;
