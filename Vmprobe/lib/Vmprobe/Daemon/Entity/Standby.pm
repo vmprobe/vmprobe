@@ -77,7 +77,7 @@ sub probe_primary {
 
         my $path_state = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
 
-        frame_try {
+        frame_try_void {
             my $args = { path => $path };
 
             if (defined $path_state->{diff} && defined $path_state->{snapshot} && defined $path_state->{connection_id}) {
@@ -111,14 +111,14 @@ sub probe_primary {
 
                 $logger->data->{snapshot_size} = length($path_state->{snapshot});
 
-                $self->copy_to_standbys($id, \$res->{delta});
+                $self->copy_to_standbys($id, $path, \$res->{delta});
             }, $path_state->{connection_id});
         } frame_catch {
             $cv->end;
 
             my $error = $@;
             chomp $error;
-            $logger->error("Probe error: $error");
+            $logger->error("$error");
 
             delete $path_state->{connection_id};
             delete $path_state->{diff};
@@ -136,7 +136,7 @@ sub probe_primary {
 
 
 sub copy_to_standbys {
-    my ($self, $id, $delta_ref, $logger) = @_;
+    my ($self, $id, $path, $delta_ref) = @_;
 
     my $standby = $self->{standbys_by_id}->{$id};
     my $state = $self->{state_by_id}->{$id};
@@ -146,52 +146,73 @@ sub copy_to_standbys {
     foreach my $remoteId (@{ $standby->{remoteIds} }) {
         next if $remoteId == $standby->{primary};
 
-        foreach my $path (@{ $standby->{paths} }) {
-            my $logger = $self->get_logger;
-            $logger->info("Standby $id, copying to standby $standby->{id}, path $path");
+        my $logger = $self->get_logger;
+        $logger->info("Standby $id, copying to remoteId $remoteId, path $path");
 
-            $state->{paths}->{$path} //= {};
-            my $path_state = ($state->{paths}->{$path}->{$remoteId} //= {});
-            my $primary_path_state = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
+        $state->{paths}->{$path} //= {};
+        my $path_state = ($state->{paths}->{$path}->{$remoteId} //= {});
+        my $primary_path_state = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
 
-            next if !defined $primary_path_state->{snapshot};
+        next if !defined $primary_path_state->{snapshot};
 
-            frame_try {
-                my $args = { path => $path };
+        if (exists $path_state->{restore_in_progress}) {
+            $logger->warn("Restore already in progress, accumulating delta");
 
-                if (defined $$delta_ref && defined $path_state->{diff} && defined $path_state->{connection_id}) {
-                    $args->{diff} = $path_state->{diff};
-                    $args->{delta} = $$delta_ref;
+            if (exists $path_state->{accumulated_delta_ref}) {
+                $path_state->{accumulated_delta_ref} = \Vmprobe::Cache::Snapshot::delta(${ $path_state->{accumulated_delta_ref} }, $$delta_ref);
+            } else {
+                $path_state->{accumulated_delta_ref} = $delta_ref;
+            }
 
-                    $logger->info("Using delta id $args->{diff}");
-                } else {
-                    delete $path_state->{connection_id};
-                    delete $path_state->{diff};
+            return;
+        }
 
-                    $args->{snapshot} = $primary_path_state->{snapshot};
-                    $args->{save} = $path_state->{diff} = get_session_token();
+        $path_state->{restore_in_progress} = 1;
 
-                    $logger->info("No valid delta id, created $args->{save}");
-                }
+        frame_try_void {
+            my $args = { path => $path };
 
-                my $timer = $logger->timer('cache::restore');
+            if (defined $$delta_ref && defined $path_state->{diff} && defined $path_state->{connection_id}) {
+                $args->{diff} = $path_state->{diff};
+                $args->{delta} = $$delta_ref;
 
-                $self->get_remote($remoteId)->probe('cache::restore', $args, sub {
-                    my ($res, $connection_id) = @_;
-
-                    undef $timer;
-
-                    $path_state->{connection_id} = $connection_id;
-                }, $path_state->{connection_id});
-            } frame_catch {
-                my $error = $@;
-                chomp $error;
-                say STDERR "copy_to_standbys error: $error";
-
+                $logger->info("Using delta id $args->{diff}");
+            } else {
                 delete $path_state->{connection_id};
                 delete $path_state->{diff};
-            };
-        }
+
+                $args->{snapshot} = $primary_path_state->{snapshot};
+                $args->{save} = $path_state->{diff} = get_session_token();
+
+                $logger->info("No valid delta id, created $args->{save}");
+            }
+
+            my $timer = $logger->timer('cache::restore');
+
+            $self->get_remote($remoteId)->probe('cache::restore', $args, sub {
+                my ($res, $connection_id) = @_;
+
+                undef $timer;
+
+                $path_state->{connection_id} = $connection_id;
+
+                delete $path_state->{restore_in_progress};
+
+                if (exists $path_state->{accumulated_delta_ref}) {
+                    $logger->warn("A delta has accumulated, restoring it now...");
+                    $self->copy_to_standbys($id, $path, delete $path_state->{accumulated_delta_ref});
+                }
+            }, $path_state->{connection_id});
+        } frame_catch {
+            my $error = $@;
+            chomp $error;
+            $logger->error("$error");
+
+            delete $path_state->{connection_id};
+            delete $path_state->{diff};
+            delete $path_state->{restore_in_progress};
+            delete $path_state->{accumulated_delta_ref};
+        };
     }
 }
 
