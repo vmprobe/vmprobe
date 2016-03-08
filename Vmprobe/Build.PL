@@ -49,7 +49,7 @@ my %module_build_args = (
     'Regexp::Assemble' => 0,
     'Twiggy::Server' => 0,
     'Log::Defer' => 0,
-    'Log::Dispatch::File::Rolling' => 0,
+    'Log::File::Rolling' => 0,
   },
   test_requires => {
   },

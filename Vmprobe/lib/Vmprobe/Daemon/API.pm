@@ -6,7 +6,7 @@ use LMDB_File;
 use Twiggy::Server;
 use Plack::Middleware::ContentLength;
 use Plack::Middleware::Deflater;
-use Log::Dispatch::File::Rolling;
+use Log::File::Rolling;
 use Data::Dumper;
 use JSON::XS;
 use Time::HiRes;
@@ -66,12 +66,11 @@ sub _open_logger {
         mkdir($log_dir) || die "couldn't mkdir($log_dir): $!";
     }
 
-    $self->{logger} = Log::Dispatch::File::Rolling->new(
-                          name => 'file1',
-                          min_level => 'info',
-                          mode => 'append',
-                          filename => "$log_dir/vmprobed.%d{yyyy-MM-ddTHH}.log",
-                      ) || die "Error creating Log::Dispatch::File::Rolling logger: $!";
+    $self->{logger} = Log::File::Rolling->new(
+                          filename => "$log_dir/vmprobed.%Y-%m-%dT%H.log",
+                          current_symlink => "$log_dir/vmprobed.log.current",
+                          timezone => 'localtime',
+                      ) || die "Error creating Log::File::Rolling logger: $!";
 }
 
 
@@ -118,7 +117,7 @@ sub get_logger {
             }
         }
 
-        $self->{logger}->log(level => 'info', message => $encoded_msg . "\n");
+        $self->{logger}->log("$encoded_msg\n");
     }});
 }
 

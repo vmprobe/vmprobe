@@ -72,8 +72,10 @@ sub route {
         $ret = $self->error($err);
     }
 
-    $logger->data->{status} = $ret->[0];
-    $logger->info("HTTP status: $ret->[0]");
+    if (ref $ret eq 'ARRAY') {
+        my $status = $logger->data->{status} = $ret->[0];
+        $logger->info("HTTP status: $status");
+    }
 
     return $ret;
 }
@@ -168,12 +170,18 @@ sub route_aux {
         return sub {
             my $responder = shift;
 
-            my $wrapped_responder = sub { $responder->($handle_content->($_[0])) };
+            my $wrapped_responder = sub {
+                my $status = $logger->data->{status} = $res->status;
+                $logger->info("HTTP status: $status");
+                $responder->($handle_content->($_[0]));
+            };
 
             frame_try {
                 $content->($wrapped_responder);
             } frame_catch {
                 $logger->error("Caught exception from callback: $@");
+                my $status = $logger->data->{status} = 500;
+                $logger->info("HTTP status: $status");
                 $responder->($self->error(500, "internal server error: $@"));
             };
 

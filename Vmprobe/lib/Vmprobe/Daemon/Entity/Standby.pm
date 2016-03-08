@@ -70,6 +70,9 @@ sub probe_primary {
     my $cv = AE::cv;
 
     foreach my $path (@{ $standby->{paths} }) {
+        my $logger = $self->get_logger;
+        $logger->info("Standby $id, probing primary ($standby->{primary}), path $path");
+
         $cv->begin;
 
         my $path_state = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
@@ -79,23 +82,34 @@ sub probe_primary {
 
             if (defined $path_state->{diff} && defined $path_state->{snapshot} && defined $path_state->{connection_id}) {
                 $args->{diff} = $path_state->{diff};
+
+                $logger->info("Using delta id $args->{diff}");
             } else {
                 delete $path_state->{connection_id};
 
                 $args->{save} = $path_state->{diff} = get_session_token();
+
+                $logger->info("No valid delta, created $args->{save}");
             }
 
+            my $timer = $logger->timer('cache::snapshot');
+
             $self->get_remote($standby->{primary})->probe('cache::snapshot', $args, sub {
-                $cv->end;
                 my ($res, $connection_id) = @_;
+
+                undef $timer;
+                $cv->end;
 
                 $path_state->{connection_id} = $connection_id;
 
                 if (defined $res->{delta}) {
+                    $logger->data->{delta_size} = length($res->{delta});
                     $path_state->{snapshot} = Vmprobe::Cache::Snapshot::delta($path_state->{snapshot}, $res->{delta});
                 } else {
                     $path_state->{snapshot} = $res->{snapshot};
                 }
+
+                $logger->data->{snapshot_size} = length($path_state->{snapshot});
 
                 $self->copy_to_standbys($id, \$res->{delta});
             }, $path_state->{connection_id});
@@ -104,7 +118,7 @@ sub probe_primary {
 
             my $error = $@;
             chomp $error;
-            say STDERR "probe_primary error: $error";
+            $logger->error("Probe error: $error");
 
             delete $path_state->{connection_id};
             delete $path_state->{diff};
@@ -122,7 +136,7 @@ sub probe_primary {
 
 
 sub copy_to_standbys {
-    my ($self, $id, $delta_ref) = @_;
+    my ($self, $id, $delta_ref, $logger) = @_;
 
     my $standby = $self->{standbys_by_id}->{$id};
     my $state = $self->{state_by_id}->{$id};
@@ -133,6 +147,9 @@ sub copy_to_standbys {
         next if $remoteId == $standby->{primary};
 
         foreach my $path (@{ $standby->{paths} }) {
+            my $logger = $self->get_logger;
+            $logger->info("Standby $id, copying to standby $standby->{id}, path $path");
+
             $state->{paths}->{$path} //= {};
             my $path_state = ($state->{paths}->{$path}->{$remoteId} //= {});
             my $primary_path_state = ($state->{paths}->{$path}->{$standby->{primary}} //= {});
@@ -145,16 +162,24 @@ sub copy_to_standbys {
                 if (defined $$delta_ref && defined $path_state->{diff} && defined $path_state->{connection_id}) {
                     $args->{diff} = $path_state->{diff};
                     $args->{delta} = $$delta_ref;
+
+                    $logger->info("Using delta id $args->{diff}");
                 } else {
                     delete $path_state->{connection_id};
                     delete $path_state->{diff};
 
                     $args->{snapshot} = $primary_path_state->{snapshot};
                     $args->{save} = $path_state->{diff} = get_session_token();
+
+                    $logger->info("No valid delta id, created $args->{save}");
                 }
+
+                my $timer = $logger->timer('cache::restore');
 
                 $self->get_remote($remoteId)->probe('cache::restore', $args, sub {
                     my ($res, $connection_id) = @_;
+
+                    undef $timer;
 
                     $path_state->{connection_id} = $connection_id;
                 }, $path_state->{connection_id});

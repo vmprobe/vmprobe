@@ -28,7 +28,7 @@ sub ENTRY_take_snapshot {
     return $c->err_bad_request("no such remoteId") if !$remote;
 
     $c->logger->info("Taking snapshot of remote $params->{remoteId}, path $params->{path}");
-    my $timer = $c->logger->timer('probe');
+    my $timer = $c->logger->timer('cache::snapshot');
 
     return sub {
         my $responder = shift;
@@ -62,6 +62,8 @@ sub ENTRY_take_snapshot {
                 $txn->commit;
 
                 $c->logger->info("Snapshot id: $to_save->{id}");
+                $c->logger->data->{snapshot_size} = length($res->{snapshot});
+                $c->logger->data->{snapshot_id} = length($to_save->{id});
 
                 $responder->({ snapshotId => $to_save->{id} });
             }
