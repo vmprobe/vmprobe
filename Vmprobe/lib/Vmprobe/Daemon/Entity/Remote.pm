@@ -173,9 +173,9 @@ sub ENTRY_delete_remote {
         $entity->remote_removed($id, $txn);
     }
 
-    Vmprobe::Daemon::DB::Remote->new($txn)->delete($id);
-
     $self->unload_remote_from_cache($remote);
+
+    Vmprobe::Daemon::DB::Remote->new($txn)->delete($id);
 
     $txn->commit;
 

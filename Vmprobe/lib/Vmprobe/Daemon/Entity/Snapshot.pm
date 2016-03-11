@@ -72,6 +72,45 @@ sub ENTRY_take_snapshot {
 }
 
 
+sub ENTRY_get_snapshot {
+    my ($self, $c) = @_;
+
+    my $txn = $self->lmdb_env->BeginTxn();
+
+    my $snapshot = Vmprobe::Daemon::DB::Snapshot->new($txn)->get($c->url_args->{snapshotId});
+    return $c->err_bad_request('no such snapshotId') if !defined $snapshot;
+
+    $txn->commit;
+
+    return {
+        id => $snapshot->{id},
+        path => $snapshot->{path},
+        time => $snapshot->{time},
+        remoteId => $snapshot->{remoteId},
+        duration => $snapshot->{duration},
+    };
+}
+
+
+
+sub ENTRY_delete_snapshot {
+    my ($self, $c) = @_;
+
+    my $id = $c->url_args->{snapshotId};
+
+    my $txn = $self->lmdb_env->BeginTxn();
+    my $db = Vmprobe::Daemon::DB::Snapshot->new($txn);
+
+    my $snapshot = $db->get($id);
+    return $c->err_bad_request('no such snapshotId') if !defined $snapshot;
+
+    $db->delete($id);
+
+    $txn->commit;
+
+    return {};
+}
+
 
 sub ENTRY_restore_snapshot {
     my ($self, $c) = @_;

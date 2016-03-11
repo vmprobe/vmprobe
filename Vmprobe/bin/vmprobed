@@ -4,6 +4,8 @@ use common::sense;
 
 use Getopt::Long;
 
+use EV;
+
 use Vmprobe::Daemon;
 use Vmprobe::Daemon::Util;
 use Vmprobe::Daemon::API;

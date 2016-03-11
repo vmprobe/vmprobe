@@ -2,7 +2,6 @@ package Vmprobe::Daemon::API;
 
 use common::sense;
 
-use EV;
 use AnyEvent;
 use LMDB_File;
 use Twiggy::Server;
@@ -226,7 +225,6 @@ sub _api_plack_handler {
             },
             '/remote/:remoteId' => {
                 GET => 'get_remote',
-                PUT => 'update_remote',
                 DELETE => 'delete_remote',
             },
         },
