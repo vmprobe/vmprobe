@@ -145,6 +145,7 @@ sub _connect_ssh {
                            $self->{host},
                            key_path => $Vmprobe::Remote::global_params->{ssh_private_key},
                            async => 1,
+                           ssh_version => 5.6, ## Needed in async program, see: https://github.com/salva/p5-Net-OpenSSH/issues/20
                            master_opts => [
                                               -o => 'StrictHostKeyChecking=yes',
                                               -o => 'PasswordAuthentication=no',
