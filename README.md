@@ -6,34 +6,41 @@
 
 ## Introduction
 
-vmprobe is a utility for managing the virtual memory of your cloud, cluster, or servers. It is based on [vmtouch](https://hoytech.com/vmtouch/) technology but it adds many new features, and two new interfaces:
+vmprobe is a utility for managing the virtual memory of your cloud, cluster, or servers. It is based on [vmtouch](https://hoytech.com/vmtouch/) technology but it adds many new capabilities.
 
-* A powerful [command-line client](https://vmprobe.com/command-line)
-* An intuitive [web GUI](https://vmprobe.com/web-gui-tutorial)
-
-In our opinion, the main feature that sets vmprobe apart from other sysadmin tools is that vmprobe is designed from the start to operate on distributed collections of machines that are typical in modern architectures. As much as possible, vmprobe removes the distinction between local and remote administration.
-
-**NOTE**: vmprobe is currently very much in beta: There are a few known bugs and a tonne of other features we plan on adding!
+For a more comprehensive introduction, please see our [official documentation](https://vmprobe.com/intro).
 
 
 ## Installing
 
-The [vmprobe installation guide](https://vmprobe.com/install) should have platform-specific instructions as well as links to the latest builds, but for now you must either install from source (see the contributing section below), or from CPAN.
+The [vmprobe install page](https://vmprobe.com/install) has pre-built linux packages which are the recommended way to deploy vmprobe. However, if you plan on developing vmprobe yourself, you will need to compile from source.
 
-If you have [cpanminus](https://metacpan.org/pod/App::cpanminus) installed, this should be as easy as:
 
-    cpanm Vmprobe --sudo
+## Compiling from source
 
-(but please be patient while it downloads, installs, and tests vmprobe and its dependencies)
+There are some compile-time dependencies needed. On Ubuntu you should be able to get them with this command:
+
+    sudo apt-get install build-essential g++ libperl-dev cpanminus
+
+Next you need to download the perl-time dependencies from CPAN. There is a script in this repo that you can run to do that:
+
+    ./build.pl quick-dev
+
+You will be prompted for your password so that cpanminus can install the packages globally on your system.
+
+Finally, you should be able to build the `vmprobe` and `vmprobed` binaries with this command:
+
+    ./build.pl build
+
+If you run into any trouble, please [create a github issue](https://github.com/vmprobe/vmprobe/issues/new).
 
 
 ## Contributing
 
-If you would like to contribute to vmprobe, first of all: thank you!
+If you would like to contribute to vmprobe, thank you! Pull requests are very welcome.
 
 Please [create a github issue](https://github.com/vmprobe/vmprobe/issues/new) with any bug report, feature request, or even general question relating to vmprobe.
 
-To develop on vmprobe itself, please see [our contributing guide](https://vmprobe.com/contributing) which should have all the steps needed to get started (if you run into any trouble, please file a github issue).
 
 
 ## License
