@@ -2,6 +2,8 @@ package Vmprobe::Cmd::vmprobe::raw;
 
 use common::sense;
 
+use POSIX;
+
 use Vmprobe::Cmd;
 use Vmprobe::Util;
 
@@ -18,6 +20,23 @@ sub run {
     binmode(STDIN);
     binmode(STDOUT);
 
+    eval {
+        run_aux();
+    };
+
+    my $err = $@;
+
+    if ($err) {
+        chomp $err;
+        print STDERR "$err\n";
+        POSIX::_exit(126);
+    }
+
+    POSIX::_exit(0);
+}
+
+
+sub run_aux {
     my $buf = "";
 
     MESSAGE: while(1) {

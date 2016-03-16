@@ -2,6 +2,18 @@ package Vmprobe;
 
 our $VERSION = 'PLACEHOLDER';
 
+
+sub load_libvmprobe {
+    if ($blib::VERSION) {
+        require FindBin;
+        require DynaLoader;
+
+        my $libvmprobe_path = "$FindBin::Bin/../../libvmprobe/libvmprobe.so";
+        DynaLoader::dl_load_file($libvmprobe_path, 0x01);
+    }
+}
+
+
 1;
 
 

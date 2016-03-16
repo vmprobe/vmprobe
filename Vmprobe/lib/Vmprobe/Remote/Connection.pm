@@ -52,6 +52,13 @@ sub _open_handle {
                                   },
                           close_all => 1,
                           '$$' => \my $pid,
+                          !defined $self->{cmd}
+                              ? (on_prepare => sub {
+                                                       require Vmprobe::Cmd;
+                                                       Vmprobe::Cmd::run_cmd('vmprobe', ['raw']);
+                                                       die "shouldn't get here";
+                                                   })
+                              : (),
                       );
 
     $self->{cmd_cv}->cb(sub {

@@ -187,11 +187,12 @@ sub _get_handle_cmd {
 
     die "not in state ok" if $self->{state} ne 'ok';
 
+    return undef if !$self->{ssh_to_localhost} && $self->{host} eq 'localhost';
+
     my $vmprobe_binary;
 
     $vmprobe_binary //= $ENV{VMPROBE_BINARY};
     $vmprobe_binary //= $Vmprobe::Remote::global_params->{vmprobe_binary};
-    $vmprobe_binary //= $0 if !$self->{ssh_to_localhost} && $self->{host} eq 'localhost';
     $vmprobe_binary //= 'vmprobe';
 
     my $cmd = [ $vmprobe_binary, 'raw', ];
@@ -216,12 +217,10 @@ sub _add_connection {
 
     my $connection_id = get_session_token();
 
-    my $cmd = $self->_get_handle_cmd;
-
     my $connection = Vmprobe::Remote::Connection->new(
                          remote_obj => $self,
                          connection_id => $connection_id,
-                         cmd => $cmd,
+                         cmd => $self->_get_handle_cmd,
                      );
 
     $self->{connections}->{$connection_id} = $connection;

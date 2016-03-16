@@ -154,7 +154,17 @@ sub sereal_decode {
         Sereal::Decoder->new()
     };
 
-    return $decoder->decode($_[0]);
+    my $decoded;
+
+    eval {
+        $decoded = $decoder->decode($_[0]);
+    };
+
+    if ($@) {
+        die "$@ (" . substr($_[0], 0, 100) . ")";
+    }
+
+    return $decoded;
 }
 
 
