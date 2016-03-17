@@ -1,0 +1,2 @@
+use readahead(2) on linux?
+handle sparse files (FS_IOC_FIEMAP)
