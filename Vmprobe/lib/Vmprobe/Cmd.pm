@@ -5,8 +5,7 @@ use common::sense;
 use Exporter 'import';
 our @EXPORT = qw(opt argv);
 
-use AnyEvent::Loop; # FIXME: EV not playing nice with Net:OpenSSH (not detecting child exits?)
-#use EV;
+use EV;
 
 use Getopt::Long qw(:config default bundling no_ignore_case no_auto_abbrev);
 use YAML;
