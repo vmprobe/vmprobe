@@ -17,6 +17,91 @@ sub ACTION_build {
 
     install_version('blib/lib/Vmprobe.pm', git_describe('vmprobe'));
     install_version('blib/lib/Vmprobe/Daemon.pm', git_describe('vmprobed'));
+}
+
+sub ACTION_clean {
+    my $self = shift;
+
+    unlink('vmprobe');
+    unlink('vmprobed');
+
+    $self->SUPER::ACTION_clean;
+
+    system("rm -rf _bundle");
+}
+
+
+
+
+sub ACTION_bundle {
+    my $self = shift;
+
+    $self->ACTION_build;
+
+    system("rm -rf _bundle");
+    mkdir("_bundle") || die "couldn't mkdir: $!";
+
+
+
+    require ExtUtils::Embed;
+
+    my $ccopts = ExtUtils::Embed::ccopts();
+    my $ldopts = ExtUtils::Embed::ldopts();
+    chomp $ccopts;
+    chomp $ldopts;
+
+    my $cmd = "cc -o vmprobe main.c $ccopts -Wl,-rpath -Wl,/usr/local/lib/vmprobe/ $ldopts";
+    sys($cmd);
+
+    sys("cp bin/vmprobe-bundled _bundle/main.pl");
+
+
+
+    my $ldd_line = `ldd ./vmprobe | grep libperl.so`;
+    $ldd_line =~ /^\s*(libperl\S+)/ || die "couldn't parse ldd";
+    my $lib_to_use = $1;
+
+    require DynaLoader;
+
+    my $libperl = DynaLoader::dl_findfile($lib_to_use);
+    sys("cp $libperl _bundle/");
+
+
+
+    build_par();
+    sys("cd _bundle/ ; unzip -q ../vmprobe.par");
+    unlink("vmprobe.par");
+    sys("chmod -R u+w _bundle");
+
+
+
+    sys("mv _bundle/shlib/*/*.so _bundle/");
+    sys("rm -rf _bundle/shlib/ _bundle/MANIFEST _bundle/META.yml _bundle/script");
+    sys("chmod a-x _bundle/*.so");
+}
+
+
+=pod
+use common::sense;
+
+use ExtUtils::Embed;
+
+my $ccopts = ccopts();
+my $ldopts = ldopts();
+
+my $cmd = "cc -o main main.c $ccopts $ldopts";
+say $cmd;
+system($cmd) && die;
+
+
+
+#perl -MDynaLoader -E 'say DynaLoader::dl_findfile("-lperl")'
+#perl -Mblib -MModule::ScanDeps -MData::Dumper -E 'print Dumper(scan_deps( files => ["bin/vmprobe"], recurse => 1))'
+
+sub ACTION_bundle {
+    my $self = shift;
+
+    $self->ACTION_build;
 
     if (mtime('vmprobe') < List::Util::max(
                                mtime('../libvmprobe/libvmprobe.so'),
@@ -25,54 +110,26 @@ sub ACTION_build {
                            )) {
         bundle_vmprobe();
     }
-
-    if (mtime('vmprobed') < List::Util::max(
-                               mtime('../libvmprobe/libvmprobe.so'),
-                               mtime('blib'),
-                               mtime(__FILE__),
-                           )) {
-        bundle_vmprobe_daemon();
-    }
 }
+=cut
 
 
-sub ACTION_clean {
-    my $self = shift;
-
-    unlink('vmprobe');
-    unlink('vmprobed');
-
-    $self->SUPER::ACTION_build;
-}
-
-
-sub bundle_vmprobe {
-    pp_wrapper(q{
-        bin/vmprobe
-        -l ../libvmprobe/libvmprobe.so
-
-        -M Vmprobe::Cmd::
-        -M Vmprobe::Probe::
-        -M Net::OpenSSH::
-
-        -o vmprobe
-    });
-}
-
-
-sub bundle_vmprobe_daemon {
+sub build_par {
     require Alien::LMDB;
 
     my $liblmdb_path = Alien::LMDB->new->dist_dir() . "/lib/liblmdb.so";
 
     pp_wrapper(qq{
-        bin/vmprobed
+        bin/vmprobe
+
         -l ../libvmprobe/libvmprobe.so
         -l $liblmdb_path
 
+        -M Vmprobe::Cmd::
+        -M Vmprobe::Probe::
         -M Net::OpenSSH::
 
-        -o vmprobed
+        -B -p -o vmprobe.par
     });
 }
 
@@ -142,5 +199,11 @@ sub mtime {
     return `find '$filename' -type f -printf '%T@\n' |sort -rn|head -1`;
 }
 
+
+sub sys {
+    my $cmd = shift;
+    print "$cmd\n";
+    system($cmd) && die;
+}
 
 1;

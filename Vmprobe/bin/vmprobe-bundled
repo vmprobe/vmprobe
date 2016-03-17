@@ -1,0 +1,8 @@
+#!/usr/bin/env perl
+
+use strict;
+
+@INC = ('/usr/local/lib/vmprobe/lib');
+
+require Vmprobe::Cmd;
+Vmprobe::Cmd::run_cmd('vmprobe', \@ARGV);

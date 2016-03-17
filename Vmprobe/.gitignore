@@ -2,6 +2,7 @@ Build
 MYMETA.json
 MYMETA.yml
 _build/
+_bundle/
 blib/
 lib/Vmprobe/Cache/Snapshot.c
 lib/Vmprobe/Cache/Snapshot.o

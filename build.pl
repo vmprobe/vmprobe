@@ -35,10 +35,10 @@ my $cmd_specs = [
     },
   },
   {
-    cmd => 'dist-vmprobe',
+    cmd => 'dist',
     doc => q{Create packages for vmprobe},
     run => sub {
-      build_perl();
+      build_perl_bundle();
 
       fpm({
         types => [qw/ deb rpm /],
@@ -47,32 +47,11 @@ my $cmd_specs = [
         files => {
           'Vmprobe/vmprobe' => '/usr/bin/vmprobe',
         },
+        dirs => {
+          'Vmprobe/_bundle/' => '/usr/local/lib/vmprobe',
+        },
         description => 'System probing tool for virtual memory and more',
         changelog => 'Vmprobe/Changes',
-      });
-    },
-  },
-  {
-    cmd => 'dist-vmprobed',
-    doc => q{Create packages for vmprobed},
-    run => sub {
-      build_perl();
-
-      fpm({
-        types => [qw/ deb rpm /],
-        name => 'vmprobed',
-        version => get_vmprobe_version('vmprobed'),
-        files => {
-            'daemon/drop-privs-wrapper' => '/usr/bin/vmprobed',
-            'Vmprobe/vmprobed' => '/usr/bin/vmprobed-noroot',
-            'daemon/vmprobed.conf' => '/etc/vmprobed/vmprobed.conf',
-        },
-        dirs => [
-            '/var/vmprobed',
-        ],
-        description => 'Daemon for managing vmprobe instances',
-        changelog => 'Vmprobe/Changes',
-        postinst => 'daemon/postinst',
       });
     },
   },
@@ -81,7 +60,6 @@ my $cmd_specs = [
     doc => q{Prints the version of vmprobe.},
     run => sub {
       print "vmprobe: " . get_vmprobe_version('vmprobe'), "\n";
-      print "vmprobed: " . get_vmprobe_version('vmprobed'), "\n";
     },
   },
   {
@@ -176,6 +154,10 @@ sub build_perl {
     sys('cd Vmprobe/ && perl Build.PL && perl Build');
 }
 
+sub build_perl_bundle {
+    sys('cd Vmprobe/ && perl Build.PL && perl Build bundle');
+}
+
 sub welcome_msg {
     print <<'END';
 
@@ -183,14 +165,10 @@ sub welcome_msg {
 
 vmprobe is ready for development!
 
-You can run the command-line utility like so:
+You can run it like so:
 
-./Vmprobe/vmprobe
-
-And the daemon like so:
-
-mkdir /tmp/vmprobed
-./Vmprobe/vmprobed -c Vmprobe/etc/vmprobed.conf
+cd Vmprobe
+perl -Mblib bin/vmprobe
 
 END
 }
@@ -225,8 +203,11 @@ sub fpm {
             sys("cp $src $dest");
         }
 
-        foreach my $dir (@{ $args->{dirs} }) {
-            sys("mkdir -p $tmp/$dir");
+        foreach my $src (keys %{ $args->{dirs} }) {
+            my $dest = "$tmp/$args->{dirs}->{$src}";
+
+            sys("mkdir -p $dest");
+            sys("cp -r $src/* $dest");
         }
 
 
