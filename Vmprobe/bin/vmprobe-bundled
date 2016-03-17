@@ -2,7 +2,12 @@
 
 use strict;
 
+
+## Run from the system-wide installation (production mode)
+
 @INC = ('/usr/local/lib/vmprobe/lib');
+
+
 
 require Vmprobe::Cmd;
 Vmprobe::Cmd::run_cmd('vmprobe', \@ARGV);

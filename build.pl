@@ -20,7 +20,7 @@ my $cmd_specs = [
     cmd => 'quick-dev-no-root',
     doc => q{Same as quick-dev, except it installs CPAN deps locally (no root required).
              Since perl modules are installed in your home directory, you must set up local::lib.
-             Further instructions will be printed by cpanm if this is not setup properly.
+             Further instructions will be printed by cpanm if this is not yet setup.
             },
     run => sub {
       install_cpan_deps_local();
@@ -28,7 +28,7 @@ my $cmd_specs = [
   },
   {
     cmd => 'build',
-    doc => q{Builds packed binaries in the Vmprobe directory},
+    doc => q{Compiles code in the Vmprobe directory},
     run => sub {
       build_perl();
       welcome_msg();
@@ -167,8 +167,7 @@ vmprobe is ready for development!
 
 You can run it like so:
 
-cd Vmprobe
-perl -Mblib bin/vmprobe
+./Vmprobe/bin/vmprobe
 
 END
 }
@@ -213,7 +212,7 @@ sub fpm {
 
         my $changelog = '';
 
-        if (exists $args->{postinst}) {
+        if (exists $args->{changelog}) {
             my $changelog_path = "$cwd/$args->{changelog}";
 
             if ($type eq 'deb') {

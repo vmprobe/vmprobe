@@ -15,7 +15,7 @@ sub ENTRY_api_info {
     my ($self, $c) = @_;
 
     my $output = {
-        service => 'vmprobed -- https://vmprobe.com',
+        service => 'vmprobe api -- https://vmprobe.com',
         version => $Vmprobe::Daemon::VERSION,
     };
 

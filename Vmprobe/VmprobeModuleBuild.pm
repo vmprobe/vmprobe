@@ -16,14 +16,12 @@ sub ACTION_build {
     $self->SUPER::ACTION_build;
 
     install_version('blib/lib/Vmprobe.pm', git_describe('vmprobe'));
-    install_version('blib/lib/Vmprobe/Daemon.pm', git_describe('vmprobed'));
 }
 
 sub ACTION_clean {
     my $self = shift;
 
     unlink('vmprobe');
-    unlink('vmprobed');
 
     $self->SUPER::ACTION_clean;
 
@@ -81,39 +79,6 @@ sub ACTION_bundle {
 }
 
 
-=pod
-use common::sense;
-
-use ExtUtils::Embed;
-
-my $ccopts = ccopts();
-my $ldopts = ldopts();
-
-my $cmd = "cc -o main main.c $ccopts $ldopts";
-say $cmd;
-system($cmd) && die;
-
-
-
-#perl -MDynaLoader -E 'say DynaLoader::dl_findfile("-lperl")'
-#perl -Mblib -MModule::ScanDeps -MData::Dumper -E 'print Dumper(scan_deps( files => ["bin/vmprobe"], recurse => 1))'
-
-sub ACTION_bundle {
-    my $self = shift;
-
-    $self->ACTION_build;
-
-    if (mtime('vmprobe') < List::Util::max(
-                               mtime('../libvmprobe/libvmprobe.so'),
-                               mtime('blib'),
-                               mtime(__FILE__),
-                           )) {
-        bundle_vmprobe();
-    }
-}
-=cut
-
-
 sub build_par {
     require Alien::LMDB;
 
@@ -127,7 +92,10 @@ sub build_par {
 
         -M Vmprobe::Cmd::
         -M Vmprobe::Probe::
+        -M Vmprobe::Daemon::
         -M Net::OpenSSH::
+
+        -M PerlIO -M attributes -M Tie::Hash::NamedCapture
 
         -B -p -o vmprobe.par
     });

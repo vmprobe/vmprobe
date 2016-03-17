@@ -2,5 +2,28 @@
 
 use strict;
 
+
+## Run from the git repository (development mode)
+
+require blib;
+
+require FindBin;
+
+die "blib not found (forgot to build Vmprobe?)"
+    if !-d "$FindBin::Bin/../blib";
+
+blib->import("$FindBin::Bin/..");
+
+require DynaLoader;
+
+my $libvmprobe_path = "$FindBin::Bin/../../libvmprobe/libvmprobe.so";
+
+die "libvmprobe.so not found (forgot to build Vmprobe?)"
+    if !-e $libvmprobe_path;
+
+DynaLoader::dl_load_file($libvmprobe_path, 0x01);
+
+
+
 require Vmprobe::Cmd;
 Vmprobe::Cmd::run_cmd('vmprobe', \@ARGV);

@@ -28,9 +28,13 @@ Next you need to download the perl-time dependencies from CPAN. There is a scrip
 
 You will be prompted for your password so that cpanminus can install the packages globally on your system.
 
-Finally, you should be able to build the `vmprobe` and `vmprobed` binaries with this command:
+Finally, you should be able to compile vmprobe with this command:
 
     ./build.pl build
+
+If all goes well you can now run vmprobe like so:
+
+    ./Vmprobe/bin/vmprobe
 
 If you run into any trouble, please [create a github issue](https://github.com/vmprobe/vmprobe/issues/new).
 

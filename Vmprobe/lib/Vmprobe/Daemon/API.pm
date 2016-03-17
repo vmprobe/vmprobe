@@ -42,7 +42,7 @@ sub new {
 
     my $logger = $self->get_logger;
 
-    $logger->info("vmprobed started, pid $$");
+    $logger->info("api started, pid $$");
     $logger->data->{start_time} = Time::HiRes::time();
     $logger->data->{pid} = $$;
 
@@ -54,8 +54,8 @@ sub new {
     };
 
     if ($@) {
-        $logger->error("Erroring starting vmprobed: $@");
-        $logger->error("vmprobed unable to run, shutting down");
+        $logger->error("Erroring starting api: $@");
+        $logger->error("api unable to run, shutting down");
         die $@;
     }
 
@@ -77,8 +77,8 @@ sub _open_logger {
     }
 
     $self->{logger} = Log::File::Rolling->new(
-                          filename => "$log_dir/vmprobed.%Y-%m-%dT%H.log",
-                          current_symlink => "$log_dir/vmprobed.log.current",
+                          filename => "$log_dir/api.%Y-%m-%dT%H.log",
+                          current_symlink => "$log_dir/api.log.current",
                           timezone => 'localtime',
                       ) || die "Error creating Log::File::Rolling logger: $!";
 }
