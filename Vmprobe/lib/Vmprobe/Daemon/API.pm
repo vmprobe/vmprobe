@@ -13,10 +13,11 @@ use JSON::XS;
 use Time::HiRes;
 use Log::Defer;
 
+use Vmprobe::Cmd;
 use Vmprobe::Util;
+
 use Vmprobe::Daemon::Util;
 use Vmprobe::Daemon::Router;
-
 use Vmprobe::Daemon::DB::Global;
 use Vmprobe::Daemon::Entity::Root;
 use Vmprobe::Daemon::Entity::Remote;
@@ -37,7 +38,7 @@ sub new {
 
     $self->_open_logger();
 
-    Vmprobe::Daemon::Util::daemonize() unless $self->{nodaemon};
+    Vmprobe::Daemon::Util::daemonize() if opt('vmprobe::api')->{daemon};
 
     my $logger = $self->get_logger;
 
@@ -106,7 +107,7 @@ sub get_logger {
     return Log::Defer->new({ cb => sub {
         my $msg = shift;
 
-        if ($self->{nodaemon}) {
+        if (!opt('vmprobe::api')->{daemon}) {
             state $pretty_json = JSON::XS->new->canonical(1)->pretty(1);
             say $pretty_json->encode($msg);
         }

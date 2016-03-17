@@ -1,6 +1,6 @@
-Build
-MYMETA.json
-MYMETA.yml
+/Build
+/MYMETA.json
+/MYMETA.yml
 _build/
 _bundle/
 blib/
@@ -8,5 +8,4 @@ lib/Vmprobe/Cache/Snapshot.c
 lib/Vmprobe/Cache/Snapshot.o
 lib/Vmprobe/Cache.c
 lib/Vmprobe/Cache.o
-vmprobe
-vmprobed
+/vmprobe
