@@ -5,7 +5,7 @@ use strict;
 
 ## Run from the system-wide installation (production mode)
 
-@INC = ('/usr/local/lib/vmprobe/lib');
+@INC = ('/usr/lib/vmprobe/lib');
 
 
 

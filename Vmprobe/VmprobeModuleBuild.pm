@@ -48,7 +48,7 @@ sub ACTION_bundle {
     chomp $ccopts;
     chomp $ldopts;
 
-    my $cmd = "cc -o vmprobe main.c $ccopts -Wl,-rpath -Wl,/usr/local/lib/vmprobe/ $ldopts";
+    my $cmd = "cc -o vmprobe main.c $ccopts -Wl,-rpath -Wl,/usr/lib/vmprobe/ $ldopts";
     sys($cmd);
 
     sys("cp bin/vmprobe-bundled _bundle/main.pl");
@@ -95,7 +95,10 @@ sub build_par {
         -M Vmprobe::Daemon::
         -M Net::OpenSSH::
 
+        ## Core modules not picked up by ScanDeps for some reason
         -M PerlIO -M attributes -M Tie::Hash::NamedCapture
+
+        -X TK::
 
         -B -p -o vmprobe.par
     });
@@ -110,6 +113,7 @@ sub pp_wrapper {
         $args
     };
 
+    $cmd =~ s/#[^\n]*\n//g;
     $cmd =~ s/\s+/ /g;
     $cmd =~ s/^\s+//g;
 

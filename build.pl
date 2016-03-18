@@ -48,7 +48,7 @@ my $cmd_specs = [
           'Vmprobe/vmprobe' => '/usr/bin/vmprobe',
         },
         dirs => {
-          'Vmprobe/_bundle/' => '/usr/local/lib/vmprobe',
+          'Vmprobe/_bundle/' => '/usr/lib/vmprobe',
         },
         description => 'System probing tool for virtual memory and more',
         changelog => 'Vmprobe/Changes',

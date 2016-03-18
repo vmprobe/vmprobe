@@ -22,7 +22,7 @@ int main(int argc, char **argv, char **env) {
     int i;
 
     cmd[0] = "";
-    cmd[1] = "/usr/local/lib/vmprobe/main.pl";
+    cmd[1] = "/usr/lib/vmprobe/main.pl";
     for(i = 1; i < argc; i++) {
         cmd[i+1] = argv[i];
     }
