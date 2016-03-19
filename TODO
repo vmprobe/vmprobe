@@ -1,2 +1,8 @@
 use readahead(2) on linux?
 handle sparse files (FS_IOC_FIEMAP)
+
+support relative paths in command line!
+
+show sub-command list in help output (only works in repo mode atm)
+
+should catch SIGBUS while faulting in pages from mmap - file could get truncated
