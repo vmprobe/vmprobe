@@ -1,6 +1,10 @@
 #include <algorithm>
 #include <map>
 
+#include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #include "pageutils.h"
@@ -9,9 +13,113 @@
 #include "snapshot.h"
 #include "crawler.h"
 #include "file.h"
+#include "pagemap.h"
+#include "mincore.h"
 
 
 namespace vmprobe { namespace cache { namespace snapshot {
+
+
+pagemap_builder::pagemap_builder() {
+    pagemap_fd = open("/proc/self/pagemap", O_RDONLY, 0);
+    if (pagemap_fd == -1) throw(std::runtime_error(std::string("Failed to open /proc/self/pagemap: ") + std::string(strerror(errno))));
+
+    kpageflags_fd = open("/proc/kpageflags", O_RDONLY, 0);
+    if (kpageflags_fd == -1) throw(std::runtime_error(std::string("Failed to open /proc/kpageflags: ") + std::string(strerror(errno))));
+}
+
+pagemap_builder::~pagemap_builder() {
+    if (pagemap_fd != -1) {
+        close(pagemap_fd);
+        pagemap_fd = -1;
+    }
+
+    if (kpageflags_fd != -1) {
+        close(kpageflags_fd);
+        kpageflags_fd = -1;
+    }
+}
+
+void pagemap_builder::register_pagemap_bit(int bit) {
+    pagemap_bits.push_back(bit);
+    builder_objs_pagemap.emplace_back();
+    builder_objs_pagemap.back().add_snapshot_flags(0);
+}
+
+void pagemap_builder::register_kpageflags_bit(int bit) {
+    kpageflags_bits.push_back(bit);
+    builder_objs_kpageflags.emplace_back();
+    builder_objs_kpageflags.back().add_snapshot_flags(0);
+}
+
+
+void pagemap_builder::crawl(std::string &path) {
+    std::string normalized_path = vmprobe::path::normalize(path);
+
+    vmprobe::cache::pagemap_result r;
+
+    vmprobe::crawler c([&](std::string &filename, struct stat &sb) {
+        vmprobe::cache::file f(filename);
+
+        f.mmap();
+        r.read_pagemap(pagemap_fd, f);
+
+        for (size_t i=0; i < pagemap_bits.size(); i++) {
+            r.scan_for_bit(pagemap_bits[i]);
+            if (!r.resident_pages) continue;
+
+            element elem;
+
+            elem.flags = 0;
+            elem.filename = (char*) filename.data() + normalized_path.size();
+            elem.filename_len = filename.size() - normalized_path.size();
+            elem.file_size = f.get_size();
+            elem.bf.num_buckets = r.num_pages;
+            elem.bf.data = r.bitfield_vec.data();
+
+            builder_objs_pagemap[i].add_element(elem);
+        }
+
+        r.read_kpageflags(kpageflags_fd);
+
+        for (size_t i=0; i < kpageflags_bits.size(); i++) {
+            r.scan_for_bit(kpageflags_bits[i]);
+            if (!r.resident_pages) continue;
+
+            element elem;
+
+            elem.flags = 0;   
+            elem.filename = (char*) filename.data() + normalized_path.size();
+            elem.filename_len = filename.size() - normalized_path.size();
+            elem.file_size = f.get_size();
+            elem.bf.num_buckets = r.num_pages;
+            elem.bf.data = r.bitfield_vec.data();
+
+            builder_objs_kpageflags[i].add_element(elem);
+        }
+    });
+
+    c.crawl(normalized_path);
+}
+
+std::string pagemap_builder::get_pagemap_snapshot(int bit) {
+    auto it = std::find(pagemap_bits.begin(), pagemap_bits.end(), bit);
+
+    if (it == pagemap_bits.end()) throw std::runtime_error("no such pagemap bit");
+
+    return builder_objs_pagemap[it - pagemap_bits.begin()].get_snapshot();
+}
+
+std::string pagemap_builder::get_kpageflags_snapshot(int bit) {
+    auto it = std::find(kpageflags_bits.begin(), kpageflags_bits.end(), bit);
+
+    if (it == kpageflags_bits.end()) throw std::runtime_error("no such kpageflags bit");
+
+    return builder_objs_kpageflags[it - kpageflags_bits.begin()].get_snapshot();
+}
+
+
+
 
 builder::builder() : vmprobe::cache::binformat::builder(vmprobe::cache::binformat::typecode::SNAPSHOT_V1) {
     auto pagesize = vmprobe::pageutils::pagesize();
@@ -21,8 +129,7 @@ builder::builder() : vmprobe::cache::binformat::builder(vmprobe::cache::binforma
 void builder::crawl(std::string &path) {
     std::string normalized_path = vmprobe::path::normalize(path);
 
-    uint64_t flags = 0;
-    buf += vmprobe::varuint64::encode(flags);
+    add_snapshot_flags(0);
 
     vmprobe::cache::mincore_result r;
 
@@ -30,7 +137,7 @@ void builder::crawl(std::string &path) {
         vmprobe::cache::file f(filename);
 
         f.mmap();
-        f.mincore(r);
+        r.mincore(f);
 
         if (!r.resident_pages) return;
 
@@ -47,6 +154,11 @@ void builder::crawl(std::string &path) {
     });
 
     c.crawl(normalized_path);
+}
+
+
+std::string builder::get_snapshot() {
+    return std::string(buf.data(), buf.size());
 }
 
 
@@ -79,7 +191,7 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
         throw std::runtime_error("if before snapshot is a delta, after must be too");
     }
 
-    buf += vmprobe::varuint64::encode(new_flags);
+    add_snapshot_flags(new_flags);
 
 
     auto *before_elem = before_parser.next();
@@ -223,7 +335,9 @@ void builder::add_element(element &elem) {
     buf += std::string(reinterpret_cast<const char *>(elem.bf.data), elem.bf.data_size());
 }
 
-
+void builder::add_snapshot_flags(uint64_t flags) {
+    buf += vmprobe::varuint64::encode(flags);
+}
 
 
 

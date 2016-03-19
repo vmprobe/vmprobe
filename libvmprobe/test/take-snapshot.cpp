@@ -10,13 +10,35 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    int bit = -1;
+
+    if (argc == 3) {
+        bit = std::stoi(argv[2]);
+    }
+
     std::string path(argv[1]);
 
     try {
-        vmprobe::cache::snapshot::builder b;
-        b.crawl(path);
+        std::string snap;
 
-        std::string snap(b.buf.data(), b.buf.size());
+        if (bit == -1) {
+            vmprobe::cache::snapshot::builder b;
+
+            b.crawl(path);
+
+            snap = b.get_snapshot();
+        } else {
+            vmprobe::cache::snapshot::pagemap_builder b;
+
+            if (bit > 54) b.register_pagemap_bit(bit);
+            else b.register_kpageflags_bit(bit);
+
+            b.crawl(path);
+
+            if (bit > 54) snap = b.get_pagemap_snapshot(bit);
+            else snap = b.get_kpageflags_snapshot(bit);
+        }
+
         std::cout << snap;
     } catch(std::runtime_error &e) {
         std::cerr << "exception: " << e.what() << std::endl;

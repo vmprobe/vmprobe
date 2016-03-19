@@ -28,12 +28,17 @@ int main(int argc, char **argv) {
             std::cout << "  RECORD FLAGS: " << elem.flags << std::endl;
             std::cout << "  SIZE: " << elem.file_size << std::endl;
 
+            uint64_t count = 0;
+
             std::cout << "  BF: ";
             for (uint64_t i=0; i < elem.bf.num_buckets; i++) {
                 int bit_state = elem.bf.get_bit(i);
+                count += bit_state;
                 std::cout << bit_state;
             }
             std::cout << std::endl;
+
+            std::cout << "COUNT: " << count << std::endl;
         });
 
         std::cout << std::endl;

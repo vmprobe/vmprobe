@@ -16,7 +16,7 @@
 namespace vmprobe { namespace cache {
 
 file::file(std::string &filename) {
-    fd = open(filename.c_str(), O_RDONLY, 0);
+    fd = open(filename.c_str(), O_RDONLY|O_NOATIME, 0);
 
     if (fd == -1) {
         // FIXME: increment_nofile_rlimit
@@ -76,29 +76,6 @@ void file::mmap() {
     }
 }
 
-size_t file::get_size() {
-    return file_size;
-}
-
-void file::mincore(mincore_result &res) {
-    res.num_pages = vmprobe::pageutils::bytes2pages(file_size);
-    res.resident_pages = 0;
-
-    res.mincore_vec.resize(res.num_pages);
-
-    if (file_size == 0) return;
-
-    if (!mmap_ptr) throw(std::runtime_error("file has not been mmap()ed yet"));
-
-    // This nasty cast is needed for portability: 3rd argument to mincore is unsigned char* on linux but char* on BSD.
-    (*(reinterpret_cast<void(*)(void*, size_t, unsigned char*)>(&::mincore)))(mmap_ptr, file_size, res.mincore_vec.data());
-
-    for (uint64_t i = 0; i < res.num_pages; i++) {
-        if (res.mincore_vec[i]) res.resident_pages++;
-    }
-
-    res.compute_bitfield();
-}
 
 
 void file::touch(size_t start, size_t len) {
@@ -157,17 +134,6 @@ void file::advise(advice a) {
 #endif
 }
 
-
-void mincore_result::compute_bitfield() {
-    bitfield_vec.clear();
-    bitfield_vec.resize((mincore_vec.size() + 7) / 8, 0);
-
-    uint8_t *ptr = bitfield_vec.data();
-
-    for (size_t i = 0; i < mincore_vec.size(); i++) {
-        ptr[i / 8] |= (mincore_vec[i] & 1) << (i & 7);
-    }
-}
 
 
 }}

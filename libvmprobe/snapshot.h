@@ -55,21 +55,54 @@ class element {
 };
 
 
+
+
 class builder : public vmprobe::cache::binformat::builder {
   public:
     builder();
 
     void crawl(std::string &path);
+    std::string get_snapshot();
 
     void delta(std::string &before, std::string &after);
     void delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
 
   private:
+    void add_snapshot_flags(uint64_t flags);
     void delta_add_elem(bool before_is_delta, element *elem);
     void delta_del_elem(bool before_is_delta, bool after_is_delta, element *elem);
     void add_element_xor_diff(element &elem_before, element &elem_after);
     void add_element(element &elem);
+
+    friend class pagemap_builder;
 };
+
+
+
+class pagemap_builder {
+  public:
+    pagemap_builder();
+    ~pagemap_builder();
+
+    void register_pagemap_bit(int bit);
+    void register_kpageflags_bit(int bit);
+
+    std::string get_pagemap_snapshot(int bit);
+    std::string get_kpageflags_snapshot(int bit);
+
+    void crawl(std::string &path);
+
+  private:
+    int pagemap_fd = -1;
+    std::vector<int> pagemap_bits;
+    std::vector<builder> builder_objs_pagemap;
+
+    int kpageflags_fd = -1;
+    std::vector<int> kpageflags_bits;
+    std::vector<builder> builder_objs_kpageflags;
+};
+
+
 
 
 

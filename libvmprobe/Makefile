@@ -5,7 +5,7 @@ STD      = -std=c++11
 CXXFLAGS = $(STD) $(OPT) $(W) -fPIC $(XCXXFLAGS)
 LDFLAGS  =
 
-OBJS     = crawler.o snapshot.o summary.o file.o cache.o varuint64.o binformat.o path.o
+OBJS     = crawler.o snapshot.o summary.o file.o cache.o varuint64.o binformat.o path.o mincore.o pagemap.o
 
 .PHONY: all clean test
 all: libvmprobe.a libvmprobe.so
