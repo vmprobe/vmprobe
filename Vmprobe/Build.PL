@@ -15,10 +15,12 @@ my %module_build_args = (
 
   build_requires => {
     'Module::Build' => '0.4214',
+    'CPAN::Meta::Converter' => '2.150005',
     'PAR::Packer' => '1.029',
   },
   configure_requires => {
     'Module::Build' => '0.4214',
+    'CPAN::Meta::Converter' => '2.150005',
     'Alien::LMDB' => 0,
   },
   requires => {
