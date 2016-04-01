@@ -7,5 +7,6 @@ snapshots:
   ! should catch SIGBUS while faulting in pages from mmap - file could get truncated
   ! report errors like permissions problems
   * handle sparse files (FS_IOC_FIEMAP)
+  ? Does it make sense to read from pagemap/kpageflags in batches to reduce memory usage?
   ? use readahead(2) on linux? MAP_POPULATE?
   ? wildcard globbing
