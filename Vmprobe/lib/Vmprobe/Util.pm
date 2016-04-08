@@ -3,7 +3,7 @@ package Vmprobe::Util;
 use common::sense;
 
 use Exporter 'import';
-our @EXPORT = qw(pages2size colour get_session_token abbreviate_perl_exception sereal_encode sereal_decode);
+our @EXPORT = qw(pages2size colour get_session_token abbreviate_perl_exception sereal_encode sereal_decode curr_time);
 
 
 
@@ -165,6 +165,15 @@ sub sereal_decode {
     }
 
     return $decoded;
+}
+
+
+sub curr_time {
+    require Time::HiRes;
+
+    my @t = Time::HiRes::gettimeofday();
+
+    return $t[0]*1_000_000 + $t[1];
 }
 
 
