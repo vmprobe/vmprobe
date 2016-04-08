@@ -34,24 +34,22 @@ my %module_build_args = (
     'JSON::XS' => 0,
     'Callback::Frame' => 0,
     'Guard' => 0,
-
-    ## Vmprobe
+    'Linux::Inotify2' => 0,
     'Net::OpenSSH' => 0,
     'Term::ANSIColor' => 0,
     'Term::Size' => 0,
     'Text::Wrapper' => 0,
+    'Text::ANSITable' => 0,
     'Sereal::Decoder' => 0,
     'Sereal::Encoder' => 0,
-
-    ## Daemon
     'LMDB_File' => 0,
-    'Plack' => 0,
-    'Plack::Middleware::ContentLength' => 0,
-    'Plack::Middleware::Deflater' => 0,
-    'Regexp::Assemble' => 0,
-    'Twiggy::Server' => 0,
     'Log::Defer' => 0,
     'Log::File::Rolling' => 0,
+    #'Plack' => 0,
+    #'Plack::Middleware::ContentLength' => 0,
+    #'Plack::Middleware::Deflater' => 0,
+    #'Regexp::Assemble' => 0,
+    #'Twiggy::Server' => 0,
   },
   test_requires => {
   },
