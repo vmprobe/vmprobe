@@ -84,7 +84,7 @@ sub process_msg {
 
     die "bad probe name: $msg->{probe}" if !Vmprobe::Util::is_valid_package_name($msg->{probe});
 
-    my $package_name = "Vmprobe::Probe::$msg->{probe}";
+    my $package_name = "Vmprobe::Raw::$msg->{probe}";
     eval "require $package_name" || die "unable to load package $package_name: $@";
 
     my $output;
@@ -94,7 +94,7 @@ sub process_msg {
 
         eval {
             $output = {
-                result => &{ "Vmprobe::Probe::$msg->{probe}::run" }($msg->{args}),
+                result => &{ "Vmprobe::Raw::$msg->{probe}::run" }($msg->{args}),
             };
         };
     }

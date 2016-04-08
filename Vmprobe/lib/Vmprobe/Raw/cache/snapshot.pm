@@ -1,4 +1,4 @@
-package Vmprobe::Probe::cache::snapshot;
+package Vmprobe::Raw::cache::snapshot;
 
 use common::sense;
 

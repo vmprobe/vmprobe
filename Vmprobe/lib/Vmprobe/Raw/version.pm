@@ -1,13 +1,11 @@
-package Vmprobe::Probe::version;
+package Vmprobe::Raw::version;
 
 use common::sense;
 
-use Vmprobe;
-use Vmprobe::Probe;
-
 use Time::HiRes;
 
-# Returns server's current time of day as an epoch timestamp. Useful for ping requests and also checking for incorrectly set clocks.
+use Vmprobe;
+
 
 sub run {
     my $vmprobe_version = $Vmprobe::VERSION;

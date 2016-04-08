@@ -1,4 +1,4 @@
-package Vmprobe::Probe::cache::restore;
+package Vmprobe::Raw::cache::restore;
 
 use common::sense;
 

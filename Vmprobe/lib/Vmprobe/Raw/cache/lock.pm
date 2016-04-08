@@ -1,4 +1,4 @@
-package Vmprobe::Probe::cache::lock;
+package Vmprobe::Raw::cache::lock;
 
 use common::sense;
 

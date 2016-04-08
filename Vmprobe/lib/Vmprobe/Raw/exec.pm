@@ -1,9 +1,8 @@
-package Vmprobe::Probe::exec;
+package Vmprobe::Raw::exec;
 
 use common::sense;
 use AnyEvent;
 
-use Vmprobe::Probe;
 
 sub run {
     my $params = shift;

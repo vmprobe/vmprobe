@@ -1,4 +1,4 @@
-package Vmprobe::Probe::cache::evict;
+package Vmprobe::Raw::cache::evict;
 
 use common::sense;
 

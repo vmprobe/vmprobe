@@ -1,8 +1,7 @@
-package Vmprobe::Probe::getfile;
+package Vmprobe::Raw::getfile;
 
 use common::sense;
 
-use Vmprobe::Probe;
 
 sub run {
     my $params = shift;

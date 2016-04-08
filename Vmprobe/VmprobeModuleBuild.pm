@@ -91,7 +91,7 @@ sub build_par {
         -l $liblmdb_path
 
         -M Vmprobe::Cmd::
-        -M Vmprobe::Probe::
+        -M Vmprobe::Raw::
         -M Vmprobe::Daemon::
         -M Net::OpenSSH::
 

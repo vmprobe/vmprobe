@@ -1,4 +1,4 @@
-package Vmprobe::Probe::cache::touch;
+package Vmprobe::Raw::cache::touch;
 
 use common::sense;
 
