@@ -1,6 +1,8 @@
 command line ui:
-  * show sub-command list in help output (only works in repo mode atm)
   * support relative paths in command line!
+  * show sub-command list in help output (only works in repo mode atm)
+  * validate() can't validate argv()
+  * Improve help output.. should show "vmprobe [cmd] <args>" example template
 
 
 snapshots:
