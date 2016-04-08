@@ -12,8 +12,6 @@ use Vmprobe::Remote::Connection;
 use Vmprobe::Util;
 
 
-our $global_params = {};
-
 
 
 sub new {
@@ -32,6 +30,10 @@ sub new {
     $self->{reconnection_interval} = $args{reconnection_interval} // 30;
     $self->{collect_version_info} = $args{collect_version_info} // 1;
     $self->{ssh_to_localhost} = $args{ssh_to_localhost} // 0;
+
+    $self->{ssh_private_key} = $args{ssh_private_key};
+    $self->{vmprobe_binary} = $args{vmprobe_binary};
+    $self->{sudo} = $args{sudo};
 
     ## Internals
 
@@ -143,7 +145,7 @@ sub _connect_ssh {
     $self->{ssh_master_pipe} = Vmprobe::Util::capture_stderr {
         $self->{ssh} = Net::OpenSSH->new(
                            $self->{host},
-                           key_path => $Vmprobe::Remote::global_params->{ssh_private_key},
+                           key_path => $self->{ssh_private_key},
                            async => 1,
                            ssh_version => 5.6, ## Needed in async program, see: https://github.com/salva/p5-Net-OpenSSH/issues/20
                            master_opts => [
@@ -192,13 +194,13 @@ sub _get_handle_cmd {
     my $vmprobe_binary;
 
     $vmprobe_binary //= $ENV{VMPROBE_BINARY};
-    $vmprobe_binary //= $Vmprobe::Remote::global_params->{vmprobe_binary};
+    $vmprobe_binary //= $self->{vmprobe_binary};
     $vmprobe_binary //= 'vmprobe';
 
     my $cmd = [ $vmprobe_binary, 'raw', ];
 
-    unshift @$cmd, qw(sudo -p -n --)
-        if $Vmprobe::Remote::global_params->{sudo};
+    unshift @$cmd, qw(sudo -n --)
+        if $self->{sudo};
 
     if (!$self->{ssh_to_localhost} && $self->{host} eq 'localhost') {
         return $cmd;
