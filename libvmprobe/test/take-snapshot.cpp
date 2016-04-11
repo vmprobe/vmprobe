@@ -30,9 +30,7 @@ int main(int argc, char **argv) {
         } else {
             vmprobe::cache::snapshot::pagemap_builder b;
 
-            // note this "54" overloading hack might prevents us from accessing some of the
-            // internal kernel bits -- don't really care for the test harness
-
+            // note this "54" overloading hack prevents us from accessing some of the internal kernel bits
             if (bit > 54) b.register_pagemap_bit(bit);
             else b.register_kpageflags_bit(bit);
 

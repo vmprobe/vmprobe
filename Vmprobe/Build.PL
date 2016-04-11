@@ -24,7 +24,6 @@ my %module_build_args = (
     'Alien::LMDB' => 0,
   },
   requires => {
-    ## Common
     'common::sense' => 0,
     'AnyEvent' => 0,
     'EV' => 0,
@@ -34,17 +33,16 @@ my %module_build_args = (
     'JSON::XS' => 0,
     'Callback::Frame' => 0,
     'Guard' => 0,
-
-    ## Vmprobe
     'Net::OpenSSH' => 0,
     'Term::ANSIColor' => 0,
     'Term::Size' => 0,
     'Text::Wrapper' => 0,
     'Sereal::Decoder' => 0,
     'Sereal::Encoder' => 0,
-
-    ## Daemon
+    'Digest::SHA3' => 0,
     'LMDB_File' => 0,
+
+    ## Not needed anymore?
     'Plack' => 0,
     'Plack::Middleware::ContentLength' => 0,
     'Plack::Middleware::Deflater' => 0,

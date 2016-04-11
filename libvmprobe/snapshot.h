@@ -67,6 +67,9 @@ class builder : public vmprobe::cache::binformat::builder {
     void delta(std::string &before, std::string &after);
     void delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
 
+    uint64_t total_files_crawled = 0;
+    uint64_t total_pages_crawled = 0;
+
   private:
     void add_snapshot_flags(uint64_t flags);
     void delta_add_elem(bool before_is_delta, element *elem);
@@ -84,13 +87,17 @@ class pagemap_builder {
     pagemap_builder();
     ~pagemap_builder();
 
+    void init_proc_files();
+
     void register_pagemap_bit(int bit);
     void register_kpageflags_bit(int bit);
-
     std::string get_pagemap_snapshot(int bit);
     std::string get_kpageflags_snapshot(int bit);
 
     void crawl(std::string &path);
+
+    uint64_t total_files_crawled = 0;
+    uint64_t total_pages_crawled = 0;
 
   private:
     int pagemap_fd = -1;

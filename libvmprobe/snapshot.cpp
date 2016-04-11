@@ -1,3 +1,4 @@
+#include <iostream> //FIXME
 #include <algorithm>
 #include <map>
 
@@ -21,11 +22,7 @@ namespace vmprobe { namespace cache { namespace snapshot {
 
 
 pagemap_builder::pagemap_builder() {
-    pagemap_fd = open("/proc/self/pagemap", O_RDONLY, 0);
-    if (pagemap_fd == -1) throw(std::runtime_error(std::string("Failed to open /proc/self/pagemap: ") + std::string(strerror(errno))));
-
-    kpageflags_fd = open("/proc/kpageflags", O_RDONLY, 0);
-    if (kpageflags_fd == -1) throw(std::runtime_error(std::string("Failed to open /proc/kpageflags: ") + std::string(strerror(errno))));
+    init_proc_files();
 }
 
 pagemap_builder::~pagemap_builder() {
@@ -37,6 +34,18 @@ pagemap_builder::~pagemap_builder() {
     if (kpageflags_fd != -1) {
         close(kpageflags_fd);
         kpageflags_fd = -1;
+    }
+}
+
+void pagemap_builder::init_proc_files() {
+    if (pagemap_fd == -1) {
+        pagemap_fd = open("/proc/self/pagemap", O_RDONLY, 0);
+        if (pagemap_fd == -1) throw(std::runtime_error(std::string("Failed to open /proc/self/pagemap: ") + std::string(strerror(errno))));
+    }
+
+    if (kpageflags_fd == -1) {
+        kpageflags_fd = open("/proc/kpageflags", O_RDONLY, 0);
+        if (kpageflags_fd == -1) throw(std::runtime_error(std::string("Failed to open /proc/kpageflags: ") + std::string(strerror(errno))));
     }
 }
 
@@ -60,6 +69,8 @@ void pagemap_builder::crawl(std::string &path) {
 
     vmprobe::crawler c([&](std::string &filename, struct stat &sb) {
         vmprobe::cache::file f(filename);
+
+        total_pages_crawled += vmprobe::pageutils::bytes2pages(f.get_size());
 
         f.mmap();
         r.read_pagemap(pagemap_fd, f);
@@ -100,6 +111,8 @@ void pagemap_builder::crawl(std::string &path) {
     });
 
     c.crawl(normalized_path);
+
+    total_files_crawled += c.num_files;
 }
 
 std::string pagemap_builder::get_pagemap_snapshot(int bit) {
@@ -136,9 +149,11 @@ void builder::crawl(std::string &path) {
     vmprobe::crawler c([&](std::string &filename, struct stat &sb) {
         vmprobe::cache::file f(filename);
 
-        f.mmap();
-        r.mincore(f);
+        total_pages_crawled += vmprobe::pageutils::bytes2pages(f.get_size());
 
+        f.mmap();
+
+        r.mincore(f);
         if (!r.resident_pages) return;
 
         element elem;
@@ -154,6 +169,8 @@ void builder::crawl(std::string &path) {
     });
 
     c.crawl(normalized_path);
+
+    total_files_crawled += c.num_files;
 }
 
 

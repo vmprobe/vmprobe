@@ -9,6 +9,12 @@ sub run {
     my ($params) = @_;
 
     die "need path" if !defined $params->{path};
+
+    return Vmprobe::Cache::Snapshot::take($params->{path}, $params->{flags} // ['mincore']);
+}
+
+
+=pod
     die "can't specify both save and diff" if defined $params->{save} && defined $params->{diff};
 
     my $snapshot = Vmprobe::Cache::Snapshot::take($params->{path});
@@ -30,5 +36,6 @@ sub run {
 
     return { snapshot => $snapshot };
 }
+=cut
 
 1;

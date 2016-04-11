@@ -12,12 +12,12 @@
 namespace vmprobe { namespace cache {
 
 void pagemap_result::read_pagemap(int pagemap_fd, vmprobe::cache::file &f) {
-    char *mmap_ptr = f.get_mmap_ptr();
-    if (!mmap_ptr) throw(std::runtime_error("file has not been mmap()ed yet"));
     size_t file_size = f.get_size();
-
     num_pages = vmprobe::pageutils::bytes2pages(file_size);
     if (num_pages == 0) return;
+
+    char *mmap_ptr = f.get_mmap_ptr();
+    if (!mmap_ptr) throw(std::runtime_error("can't read pagemap: file has not been mmap()ed yet"));
 
 
     mincore_vec.resize(num_pages);

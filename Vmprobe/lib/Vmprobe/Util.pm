@@ -177,4 +177,19 @@ sub curr_time {
 }
 
 
+
+sub parse_key_value {
+    my $str = shift;
+
+    my $o = {};
+
+    foreach my $kv (split /\s+/, $str) {
+        $kv =~ /\A([^=]+)=(\S+)/ || die "no = character found";
+        $o->{$1} = $2;
+    }
+
+    return $o;
+}
+
+
 1;

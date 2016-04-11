@@ -5,6 +5,8 @@ use strict;
 
 ## Run from the git repository (development mode)
 
+$Vmprobe::repo_binary = $0;
+
 require blib;
 
 require FindBin;

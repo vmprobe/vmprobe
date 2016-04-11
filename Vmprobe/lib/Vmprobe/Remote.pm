@@ -193,7 +193,10 @@ sub _get_handle_cmd {
         return undef;
     }
 
-    my $vmprobe_binary = $ENV{VMPROBE_BINARY} // $self->{vmprobe_binary} // 'vmprobe';
+    my $vmprobe_binary = $ENV{VMPROBE_BINARY}
+                         // $self->{vmprobe_binary}
+                         // ($self->{host} eq 'localhost' ? $Vmprobe::repo_binary : undef)
+                         // 'vmprobe';
 
     my $cmd = [ $vmprobe_binary, 'raw', ];
 
