@@ -22,7 +22,7 @@ sub new {
 
     ## Args
 
-    $self->{host} = $args{host};
+    $self->{host} = $args{host} // 'localhost';
     $self->{on_state_change} = $args{on_state_change} // sub {};
     $self->{on_error_message} = $args{on_error_message};
     $self->{on_connection_established} = $args{on_connection_established} // sub {};
@@ -30,7 +30,6 @@ sub new {
     $self->{reconnection_interval} = $args{reconnection_interval} // 30;
     $self->{collect_version_info} = $args{collect_version_info} // 1;
     $self->{ssh_to_localhost} = $args{ssh_to_localhost} // 0;
-
     $self->{ssh_private_key} = $args{ssh_private_key};
     $self->{vmprobe_binary} = $args{vmprobe_binary};
     $self->{sudo} = $args{sudo};
@@ -132,7 +131,7 @@ sub _connect_ssh {
 
     return if $self->{state} ne 'disconnected';
 
-    if (!$self->{ssh_to_localhost} && $self->{host} eq 'localhost') {
+    if ($self->{host} eq 'localhost' && !$self->{ssh_to_localhost}) {
         $self->set_state('ok');
         $self->_drain_probes;
         return;
@@ -189,20 +188,19 @@ sub _get_handle_cmd {
 
     die "not in state ok" if $self->{state} ne 'ok';
 
-    return undef if !$self->{ssh_to_localhost} && $self->{host} eq 'localhost';
+    if ($self->{host} eq 'localhost' && !$self->{ssh_to_localhost} && !$self->{sudo}) {
+        ## undef means just fork, don't exec
+        return undef;
+    }
 
-    my $vmprobe_binary;
-
-    $vmprobe_binary //= $ENV{VMPROBE_BINARY};
-    $vmprobe_binary //= $self->{vmprobe_binary};
-    $vmprobe_binary //= 'vmprobe';
+    my $vmprobe_binary = $ENV{VMPROBE_BINARY} // $self->{vmprobe_binary} // 'vmprobe';
 
     my $cmd = [ $vmprobe_binary, 'raw', ];
 
     unshift @$cmd, qw(sudo -n --)
         if $self->{sudo};
 
-    if (!$self->{ssh_to_localhost} && $self->{host} eq 'localhost') {
+    if ($self->{host} eq 'localhost' && !$self->{ssh_to_localhost}) {
         return $cmd;
     }
 
