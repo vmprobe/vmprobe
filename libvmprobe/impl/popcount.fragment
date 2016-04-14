@@ -1,0 +1,16 @@
+uint64_t bitfield::popcount() {
+    uint64_t bytes = data_size();
+    uint64_t count = 0;
+
+    uint64_t i = 0;
+
+    for (; i < bytes/8; i+=8) {
+        count += __builtin_popcountll(((uint64_t *)data)[i/8]);
+    }
+
+    for (; i < bytes; i++) {
+        count += __builtin_popcount(data[i] & 0xFF);
+    }
+
+    return count;
+}
