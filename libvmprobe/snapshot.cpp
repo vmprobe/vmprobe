@@ -513,6 +513,94 @@ void builder::add_element_bitwise_and(element &elem_a, element &elem_b) {
 
 
 
+void builder::build_subtract(std::string &a, std::string &b) {
+    build_subtract((char*)a.data(), a.size(), (char*)b.data(), b.size());
+}
+
+void builder::build_subtract(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len) {
+    add_snapshot_flags(0);
+
+    vmprobe::cache::snapshot::parser a_parser(a_ptr, a_len);
+    vmprobe::cache::snapshot::parser b_parser(b_ptr, b_len);
+
+    auto *a_elem = a_parser.next();
+    auto *b_elem = b_parser.next();
+
+    while (a_elem || b_elem) {
+        if (!a_elem) {
+            b_elem = b_parser.next();
+            continue;
+        }
+
+        if (!b_elem) {
+            add_element(*a_elem);
+            a_elem = a_parser.next();
+            continue;
+        }
+
+        std::string a_filename(a_elem->filename, a_elem->filename_len);
+        std::string b_filename(b_elem->filename, b_elem->filename_len);
+
+        int cmp = a_filename.compare(b_filename);
+
+        if (cmp > 0) {
+            b_elem = b_parser.next();
+            continue;
+        } else if (cmp < 0) {
+            add_element(*a_elem);
+            a_elem = a_parser.next();
+            continue;
+        } else {
+            add_element_bitwise_subtract(*a_elem, *b_elem);
+
+            a_elem = a_parser.next();
+            b_elem = b_parser.next();
+            continue;
+        }
+    }
+}
+
+
+
+void builder::add_element_bitwise_subtract(element &elem_a, element &elem_b) {
+    element new_elem;
+
+    new_elem.flags = 0;
+    new_elem.filename = elem_a.filename;
+    new_elem.filename_len = elem_a.filename_len;
+    new_elem.file_size = std::max(elem_a.file_size, elem_b.file_size);
+
+    std::vector<uint8_t> new_vec(std::max(elem_a.bf.data_size(), elem_b.bf.data_size()), 0);
+
+    size_t i = 0;
+    uint8_t accumulator = 0;
+
+    for(; i < std::min(elem_a.bf.data_size(), elem_b.bf.data_size()); i++) {
+        new_vec[i] = elem_a.bf.data[i] & ~(elem_b.bf.data[i]);
+        accumulator |= new_vec[i];
+    }
+
+    if (elem_a.bf.data_size() > elem_b.bf.data_size()) {
+        for(; i < elem_a.bf.data_size(); i++) {
+            new_vec[i] = elem_a.bf.data[i];
+            accumulator |= new_vec[i];
+        }
+    }
+
+    if (!accumulator) return;
+
+    new_elem.bf.num_buckets = std::max(elem_a.bf.num_buckets, elem_b.bf.num_buckets);
+    new_elem.bf.data = new_vec.data();
+
+    add_element(new_elem);
+}
+
+
+
+
+
+
+
 void builder::add_element(element &elem) {
     std::string tmp;
 

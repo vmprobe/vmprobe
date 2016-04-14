@@ -84,6 +84,7 @@ class builder : public vmprobe::cache::binformat::builder {
     void add_element_xor_diff(element &elem_before, element &elem_after);
     void add_element_bitwise_or(element &elem_a, element &elem_b);
     void add_element_bitwise_and(element &elem_a, element &elem_b);
+    void add_element_bitwise_subtract(element &elem_a, element &elem_b);
     void add_element(element &elem);
 
     friend class pagemap_builder;

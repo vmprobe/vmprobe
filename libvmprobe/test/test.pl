@@ -106,6 +106,17 @@ is(slurp("$snapshots_dir/none"), slurp("$tempdir/intersection-temp3"), "intersec
 
 
 
+## Subtract
+
+# ./subtract-snapshots <(./subtract-snapshots test-snapshots/all test-snapshots/some-c) test-snapshots/just-b  > test-snapshots/subtract-all--some-c--just-b
+subtract("$snapshots_dir/all", "$snapshots_dir/some-c", "$tempdir/subtract-temp1");
+subtract("$tempdir/subtract-temp1", "$snapshots_dir/just-b", "$tempdir/subtract-temp2");
+is(slurp("$snapshots_dir/subtract-all--some-c--just-b"), slurp("$tempdir/subtract-temp2"), "subtract");
+
+
+
+
+
 ## Finished
 
 restore_snapshot("$snapshots_dir/none");
@@ -151,6 +162,12 @@ sub intersection {
     my ($a, $b, $output) = @_;
 
     system("./intersection-snapshots $a $b > $output");
+}
+
+sub subtract {
+    my ($a, $b, $output) = @_;
+
+    system("./subtract-snapshots $a $b > $output");
 }
 
 sub curr_snapshot {
