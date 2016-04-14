@@ -1,4 +1,5 @@
-delta-snapshots
 parse-snapshot
 take-snapshot
 restore-snapshot
+delta-snapshots
+union-snapshots

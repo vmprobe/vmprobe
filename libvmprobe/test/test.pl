@@ -78,6 +78,19 @@ is(slurp("$snapshots_dir/step5"), slurp("$tempdir/recovered3_step5"), "reverse d
 
 
 
+
+## Unions
+
+
+#./union-snapshots test-snapshots/just-a <( ./union-snapshots test-snapshots/some-c test-snapshots/other-c ) > test-snapshots/union-just-a--some-c--other-c
+union("$snapshots_dir/just-a", "$snapshots_dir/some-c", "$tempdir/union-temp1");
+union("$tempdir/union-temp1", "$snapshots_dir/other-c", "$tempdir/union-temp2");
+is(slurp("$snapshots_dir/union-just-a--some-c--other-c"), slurp("$tempdir/union-temp2"), "union");
+
+
+
+
+
 ## Finished
 
 restore_snapshot("$snapshots_dir/none");
@@ -111,6 +124,12 @@ sub delta {
     my ($before, $after, $output) = @_;
 
     system("./delta-snapshots $before $after > $output");
+}
+
+sub union {
+    my ($a, $b, $output) = @_;
+
+    system("./union-snapshots $a $b > $output");
 }
 
 sub curr_snapshot {

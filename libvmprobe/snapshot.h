@@ -67,6 +67,13 @@ class builder : public vmprobe::cache::binformat::builder {
     void delta(std::string &before, std::string &after);
     void delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
 
+    void build_union(std::string &a, std::string &b);
+    void build_union(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len);
+    void build_intersection(std::string &a, std::string &b);
+    void build_uintersection(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len);
+    void build_subtract(std::string &a, std::string &b);
+    void build_subtract(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len);
+
     uint64_t total_files_crawled = 0;
     uint64_t total_pages_crawled = 0;
 
@@ -75,6 +82,7 @@ class builder : public vmprobe::cache::binformat::builder {
     void delta_add_elem(bool before_is_delta, element *elem);
     void delta_del_elem(bool before_is_delta, bool after_is_delta, element *elem);
     void add_element_xor_diff(element &elem_before, element &elem_after);
+    void add_element_bitwise_or(element &elem_a, element &elem_b);
     void add_element(element &elem);
 
     friend class pagemap_builder;
