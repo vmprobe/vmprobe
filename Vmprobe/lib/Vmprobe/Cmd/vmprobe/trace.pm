@@ -77,10 +77,13 @@ sub run {
     my $trace_summary_encoded = sereal_encode($trace_summary);
 
     if (defined opt->{output}) {
+        say STDERR "Saving new trace $trace_summary->{trace_id} to file '" . opt->{output} . "'" unless opt->{quiet};
+
         open($output_fh, '>', opt->{output}) || die "couldn't open output file " . opt->{output} . " for writing: $!";
         print $output_fh pack("w", length($trace_summary_encoded));
         print $output_fh $trace_summary_encoded;
     } else {
+        say STDERR "Saving new trace $trace_summary->{trace_id} to DB" unless opt->{quiet};
         ## FIXME: save to DB
     }
 

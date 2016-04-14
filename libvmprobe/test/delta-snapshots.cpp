@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 
 
     vmprobe::cache::snapshot::builder b;
-    b.delta(before, after);
+    b.build_delta(before, after);
 
     std::string delta(b.buf.data(), b.buf.size());
     std::cout << delta;

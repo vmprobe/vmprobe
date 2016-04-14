@@ -11,9 +11,11 @@ use parent 'Vmprobe::Probe';
 sub init {
     my ($self) = @_;
 
+    if ($self->{params}->{path} !~ m{\A/} && (!defined $self->{params}->{host} || $self->{params}->{host} eq 'localhost')) {
+        $self->{params}->{path} = Cwd::realpath($self->{params}->{path})
+    }
+
     $self->{path} = $self->{params}->{path};
-    $self->{path} = Cwd::realpath($self->{path})
-        if $self->{path} !~ m{\A/} && (!defined $self->{params}->{host} || $self->{params}->{host} eq 'localhost');
 
     my @flags;
 

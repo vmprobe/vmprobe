@@ -9,6 +9,7 @@ snapshots:
   ! should catch SIGBUS while faulting in pages from mmap - file could get truncated
   ! nicely report errors like permissions problems
   ! detect duplicate hard-links in crawler.cpp
+  * use SSE and whatnot to speed up snapshot operations
   * handle sparse files (FS_IOC_FIEMAP)
   * subsume mincore builder into pagemap builder (since it calls mincore anyway)
   ? Does it make sense to read from pagemap/kpageflags in batches to reduce memory usage?
