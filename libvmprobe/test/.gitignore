@@ -3,3 +3,4 @@ take-snapshot
 restore-snapshot
 delta-snapshots
 union-snapshots
+intersection-snapshots

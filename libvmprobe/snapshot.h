@@ -70,7 +70,7 @@ class builder : public vmprobe::cache::binformat::builder {
     void build_union(std::string &a, std::string &b);
     void build_union(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len);
     void build_intersection(std::string &a, std::string &b);
-    void build_uintersection(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len);
+    void build_intersection(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len);
     void build_subtract(std::string &a, std::string &b);
     void build_subtract(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len);
 
@@ -83,6 +83,7 @@ class builder : public vmprobe::cache::binformat::builder {
     void delta_del_elem(bool before_is_delta, bool after_is_delta, element *elem);
     void add_element_xor_diff(element &elem_before, element &elem_after);
     void add_element_bitwise_or(element &elem_a, element &elem_b);
+    void add_element_bitwise_and(element &elem_a, element &elem_b);
     void add_element(element &elem);
 
     friend class pagemap_builder;

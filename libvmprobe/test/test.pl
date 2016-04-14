@@ -90,6 +90,21 @@ is(slurp("$snapshots_dir/union-just-a--some-c--other-c"), slurp("$tempdir/union-
 
 
 
+## Intersection
+
+# /intersection-snapshots test-snapshots/some-c test-snapshots/other-c > test-snapshots/intersection-some-c--other-c
+
+intersection("$snapshots_dir/some-c", "$snapshots_dir/other-c", "$tempdir/intersection-temp1");
+is(slurp("$snapshots_dir/intersection-some-c--other-c"), slurp("$tempdir/intersection-temp1"), "intersection 1");
+
+intersection("$snapshots_dir/all", "$snapshots_dir/just-b", "$tempdir/intersection-temp2");
+is(slurp("$snapshots_dir/just-b"), slurp("$tempdir/intersection-temp2"), "intersection 2");
+
+intersection("$snapshots_dir/some-c", "$snapshots_dir/just-b", "$tempdir/intersection-temp3");
+is(slurp("$snapshots_dir/none"), slurp("$tempdir/intersection-temp3"), "intersection 3");
+
+
+
 
 ## Finished
 
@@ -130,6 +145,12 @@ sub union {
     my ($a, $b, $output) = @_;
 
     system("./union-snapshots $a $b > $output");
+}
+
+sub intersection {
+    my ($a, $b, $output) = @_;
+
+    system("./intersection-snapshots $a $b > $output");
 }
 
 sub curr_snapshot {
