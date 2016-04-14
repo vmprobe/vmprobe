@@ -64,9 +64,8 @@ class builder : public vmprobe::cache::binformat::builder {
     void crawl(std::string &path);
     std::string get_snapshot();
 
-    void delta(std::string &before, std::string &after);
-    void delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
-
+    void build_delta(std::string &before, std::string &after);
+    void build_delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len);
     void build_union(std::string &a, std::string &b);
     void build_union(char *a_ptr, size_t a_len, char *b_ptr, size_t b_len);
     void build_intersection(std::string &a, std::string &b);
@@ -81,7 +80,7 @@ class builder : public vmprobe::cache::binformat::builder {
     void add_snapshot_flags(uint64_t flags);
     void delta_add_elem(bool before_is_delta, element *elem);
     void delta_del_elem(bool before_is_delta, bool after_is_delta, element *elem);
-    void add_element_xor_diff(element &elem_before, element &elem_after);
+    void add_element_bitwise_xor(element &elem_before, element &elem_after);
     void add_element_bitwise_or(element &elem_a, element &elem_b);
     void add_element_bitwise_and(element &elem_a, element &elem_b);
     void add_element_bitwise_subtract(element &elem_a, element &elem_b);

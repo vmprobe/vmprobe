@@ -179,8 +179,8 @@ std::string builder::get_snapshot() {
 }
 
 
-void builder::delta(std::string &before, std::string &after) {
-    delta((char*)before.data(), before.size(), (char*)after.data(), after.size());
+void builder::build_delta(std::string &before, std::string &after) {
+    build_delta((char*)before.data(), before.size(), (char*)after.data(), after.size());
 }
 
 /*
@@ -193,7 +193,7 @@ D, N: invalid
 D, D: D, merge
 */
 
-void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len) {
+void builder::build_delta(char *before_ptr, size_t before_len, char *after_ptr, size_t after_len) {
     vmprobe::cache::snapshot::parser before_parser(before_ptr, before_len);
     vmprobe::cache::snapshot::parser after_parser(after_ptr, after_len);
 
@@ -242,7 +242,7 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
             continue;
         } else {
             if (!before_is_delta && !after_is_delta) {
-                add_element_xor_diff(*before_elem, *after_elem);
+                add_element_bitwise_xor(*before_elem, *after_elem);
             } else if (!before_is_delta && after_is_delta) {
                 if ((after_elem->flags & ELEMENT_DELETED)) {
                     if (after_elem->bf.num_buckets) {
@@ -250,13 +250,13 @@ void builder::delta(char *before_ptr, size_t before_len, char *after_ptr, size_t
                         add_element(*after_elem);
                     }
                 } else {
-                    add_element_xor_diff(*before_elem, *after_elem);
+                    add_element_bitwise_xor(*before_elem, *after_elem);
                 }
             } else {
                 if ((after_elem->flags & ELEMENT_DELETED)) {
                     add_element(*after_elem);
                 } else {
-                    add_element_xor_diff(*before_elem, *after_elem);
+                    add_element_bitwise_xor(*before_elem, *after_elem);
                 }
             }
             before_elem = before_parser.next();
@@ -292,7 +292,7 @@ void builder::delta_del_elem(bool before_is_delta, bool after_is_delta, element 
     }
 }
 
-void builder::add_element_xor_diff(element &elem_before, element &elem_after) {
+void builder::add_element_bitwise_xor(element &elem_before, element &elem_after) {
     element new_elem;
 
     new_elem.flags = 0;

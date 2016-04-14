@@ -205,7 +205,106 @@ delta(before_sv, after_sv)
         try {
             vmprobe::cache::snapshot::builder b;
 
-            b.delta(before_p, before_len, after_p, after_len);
+            b.build_delta(before_p, before_len, after_p, after_len);
+
+            output = newSVpvn(b.buf.data(), b.buf.size());
+        } catch(std::runtime_error &e) {
+            croak(e.what());
+        }
+
+        RETVAL = output;
+    OUTPUT:
+        RETVAL
+
+
+
+
+SV *
+union(a_sv, b_sv)
+        SV *a_sv
+        SV *b_sv
+    CODE:
+        char *a_p;
+        size_t a_len;
+        char *b_p;
+        size_t b_len;
+        SV *output;
+
+        a_len = SvCUR(a_sv);
+        a_p = SvPV(a_sv, a_len);
+        b_len = SvCUR(b_sv);
+        b_p = SvPV(b_sv, b_len);
+
+        try {
+            vmprobe::cache::snapshot::builder b;
+
+            b.build_union(a_p, a_len, b_p, b_len);
+
+            output = newSVpvn(b.buf.data(), b.buf.size());
+        } catch(std::runtime_error &e) {
+            croak(e.what());
+        }
+
+        RETVAL = output;
+    OUTPUT:
+        RETVAL
+
+
+
+
+SV *
+intersection(a_sv, b_sv)
+        SV *a_sv
+        SV *b_sv
+    CODE:
+        char *a_p;
+        size_t a_len;
+        char *b_p;
+        size_t b_len;
+        SV *output;
+
+        a_len = SvCUR(a_sv);
+        a_p = SvPV(a_sv, a_len);
+        b_len = SvCUR(b_sv);
+        b_p = SvPV(b_sv, b_len);
+
+        try {
+            vmprobe::cache::snapshot::builder b;
+
+            b.build_intersection(a_p, a_len, b_p, b_len);
+
+            output = newSVpvn(b.buf.data(), b.buf.size());
+        } catch(std::runtime_error &e) {
+            croak(e.what());
+        }
+
+        RETVAL = output;
+    OUTPUT:
+        RETVAL
+
+
+
+
+SV *
+subtract(a_sv, b_sv)
+        SV *a_sv
+        SV *b_sv
+    CODE:
+        char *a_p;
+        size_t a_len;
+        char *b_p;
+        size_t b_len;
+        SV *output;
+
+        a_len = SvCUR(a_sv);
+        a_p = SvPV(a_sv, a_len);
+        b_len = SvCUR(b_sv);
+        b_p = SvPV(b_sv, b_len);
+
+        try {
+            vmprobe::cache::snapshot::builder b;
+
+            b.build_subtract(a_p, a_len, b_p, b_len);
 
             output = newSVpvn(b.buf.data(), b.buf.size());
         } catch(std::runtime_error &e) {
