@@ -122,6 +122,33 @@ class pagemap_builder {
 
 
 
+class record {
+  public:
+    record() {}
+
+    std::vector<uint64_t> get_buckets(uint64_t num_buckets, uint64_t &pages_per_bucket);
+    void get_filename(char *&filename, size_t &filename_len) { filename = elem.filename; filename_len = elem.filename_len; }
+    uint64_t get_num_pages() { return elem.bf.num_buckets; }
+    uint64_t get_num_resident_pages() { return num_resident; }
+
+    element elem;
+    uint64_t num_resident;
+};
+
+class record_container {
+  public:
+    record_container() {}
+    record_container(const record_container&) = delete;
+    record_container(record_container&&) = default;
+
+    void sort_by_num_resident_pages();
+    void limit(uint64_t num);
+
+    std::vector<record> records;
+    uint64_t total_resident = 0;
+};
+
+
 
 using parser_element_handler_cb = std::function<void(element &elem)>;
 
@@ -131,6 +158,7 @@ class parser : public vmprobe::cache::binformat::parser {
     parser(char *ptr, size_t len);
 
     void process(parser_element_handler_cb cb);
+    record_container get_record_container();
     element *next();
 
     uint64_t pagesize;
@@ -138,15 +166,16 @@ class parser : public vmprobe::cache::binformat::parser {
 
   private:
 
-    std::string curr_filename;
     element curr_elem;
 };
 
+
+
+
+
+
+
 void restore(std::string &path, char *snapshot_ptr, size_t snapshot_len);
-
-
-
-
 
 
 

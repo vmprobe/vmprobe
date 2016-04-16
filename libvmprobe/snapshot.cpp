@@ -1,6 +1,6 @@
-#include <iostream> //FIXME
 #include <algorithm>
 #include <map>
+#include <utility>
 
 #include <string.h>
 #include <errno.h>
@@ -177,6 +177,30 @@ void builder::crawl(std::string &path) {
 std::string builder::get_snapshot() {
     return std::string(buf.data(), buf.size());
 }
+
+
+
+
+
+void builder::add_element(element &elem) {
+    std::string tmp;
+
+    tmp += vmprobe::varuint64::encode(elem.flags);
+    tmp += vmprobe::varuint64::encode(elem.filename_len);
+    tmp += std::string(elem.filename, elem.filename_len);
+    tmp += vmprobe::varuint64::encode(elem.file_size);
+    tmp += vmprobe::varuint64::encode(elem.bf.num_buckets);
+
+    buf += vmprobe::varuint64::encode(tmp.size() + elem.bf.data_size());
+    buf += tmp;
+    buf += std::string(reinterpret_cast<const char *>(elem.bf.data), elem.bf.data_size());
+}
+
+void builder::add_snapshot_flags(uint64_t flags) {
+    buf += vmprobe::varuint64::encode(flags);
+}
+
+
 
 
 void builder::build_delta(std::string &before, std::string &after) {
@@ -601,23 +625,11 @@ void builder::add_element_bitwise_subtract(element &elem_a, element &elem_b) {
 
 
 
-void builder::add_element(element &elem) {
-    std::string tmp;
 
-    tmp += vmprobe::varuint64::encode(elem.flags);
-    tmp += vmprobe::varuint64::encode(elem.filename_len);
-    tmp += std::string(elem.filename, elem.filename_len);
-    tmp += vmprobe::varuint64::encode(elem.file_size);
-    tmp += vmprobe::varuint64::encode(elem.bf.num_buckets);
 
-    buf += vmprobe::varuint64::encode(tmp.size() + elem.bf.data_size());
-    buf += tmp;
-    buf += std::string(reinterpret_cast<const char *>(elem.bf.data), elem.bf.data_size());
-}
 
-void builder::add_snapshot_flags(uint64_t flags) {
-    buf += vmprobe::varuint64::encode(flags);
-}
+
+
 
 
 
@@ -671,6 +683,83 @@ void parser::process(parser_element_handler_cb cb) {
         cb(*e);
     }
 }
+
+
+
+
+
+record_container parser::get_record_container() {
+    record_container c;
+
+    process([&](element &elem) {
+        c.records.emplace_back();
+        c.records.back().elem = elem;
+        c.records.back().num_resident = elem.bf.popcount();
+        c.total_resident += c.records.back().num_resident;
+    });
+
+    return std::move(c);
+}
+
+
+
+void record_container::sort_by_num_resident_pages() {
+    std::sort(records.begin(), records.end(), [](record a, record b){ return a.num_resident < b.num_resident; });
+}
+
+
+void record_container::limit(uint64_t num) {
+    if (num >= records.size()) return;
+
+    records.resize(num);
+
+    total_resident = 0;
+
+    for (auto &record : records) {
+        total_resident += record.num_resident;
+    }
+}
+
+
+std::vector<uint64_t> record::get_buckets(uint64_t num_buckets, uint64_t &pages_per_bucket) {
+    std::vector<uint64_t> buckets;
+
+    size_t total_bytes = elem.bf.data_size();
+
+    uint64_t bytes_per_bucket = (total_bytes + num_buckets - 1) / num_buckets;
+
+    uint64_t curr = 0;
+    vmprobe::cache::bitfield temp_bf;
+
+    while (curr < total_bytes) {
+        size_t bytes_in_this_bucket = std::min(bytes_per_bucket, total_bytes - curr);
+
+        temp_bf.data = elem.bf.data + curr;
+        temp_bf.num_buckets = bytes_in_this_bucket * 8;
+
+        buckets.push_back(temp_bf.popcount());
+
+        curr += bytes_in_this_bucket;
+    }
+
+    pages_per_bucket = bytes_per_bucket * 8;
+
+    return std::move(buckets);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 static void restore_residency_state(uint64_t bucket_size, vmprobe::cache::file &file, vmprobe::cache::bitfield &bf) {
