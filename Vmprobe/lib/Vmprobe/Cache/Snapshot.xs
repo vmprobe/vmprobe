@@ -186,6 +186,66 @@ summarize(snapshot_sv, buckets)
 
 
 
+
+SV *
+parse_records(snapshot_sv, num_buckets, limit)
+        SV *snapshot_sv
+        long num_buckets
+        long limit
+    INIT:
+        char *snapshot_p;
+        size_t snapshot_len;
+
+        snapshot_len = SvCUR(snapshot_sv);
+        snapshot_p = SvPV(snapshot_sv, snapshot_len);
+
+        AV *results;
+        results = (AV *) sv_2mortal ((SV *) newAV ());
+
+    CODE:
+        try {
+            vmprobe::cache::snapshot::parser p(snapshot_p, snapshot_len);
+
+            vmprobe::cache::snapshot::record_container container = p.get_record_container();
+
+            container.sort_by_num_resident_pages();
+            container.limit(limit);
+
+            for (auto &record : container.records) {
+                HV *rh = (HV *) sv_2mortal ((SV *) newHV());
+
+                char *filename;
+                size_t filename_len;
+                record.get_filename(filename, filename_len);
+                hv_store(rh, "filename", 8, newSVpvn(filename, filename_len), 0);
+
+                hv_store(rh, "num_pages", 9, newSVuv(record.get_num_pages()), 0);
+                hv_store(rh, "num_resident_pages", 18, newSVuv(record.get_num_resident_pages()), 0);
+
+                uint64_t pages_per_bucket;
+                std::vector<uint64_t> buckets = record.get_buckets(num_buckets, pages_per_bucket);
+
+                AV *records = newAV();
+                for (auto bucket_val : buckets) {
+                    av_push(records, newSVuv(bucket_val));
+                }
+
+                hv_store(rh, "pages_per_bucket", 16, newSVuv(pages_per_bucket), 0);
+                hv_store(rh, "buckets", 7, newRV((SV *)records), 0);
+
+                av_push(results, newRV((SV *)rh));
+            }
+        } catch(std::runtime_error &e) {
+            croak(e.what());
+        }
+
+        RETVAL = newRV((SV *)results);
+    OUTPUT:
+        RETVAL
+
+
+
+
 SV *
 delta(before_sv, after_sv)
         SV *before_sv
