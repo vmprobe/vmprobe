@@ -9,7 +9,10 @@ use AnyEvent::Util;
 use Vmprobe::Cmd;
 use Vmprobe::Util;
 use Vmprobe::RunContext;
-use Vmprobe::TraceEngine;
+use Vmprobe::Probe;
+use Vmprobe::RemoteCache;
+use Vmprobe::Viewer;
+use Vmprobe::Cache::Snapshot;
 #use Vmprobe::DB::Object;
 
 
@@ -19,7 +22,7 @@ doc: Capture a trace.
 
 opt:
   probe:
-    type: Str[]
+    type: Str
     alias: p
     doc: Probe definition, key=value pairs separated by white-space.
   file:
@@ -46,6 +49,10 @@ opt:
     type: Bool
     alias: q
     doc: Don't print any informational messages to stderr.
+  curses:
+    type: Bool
+    alias: c
+    doc: Show interactive curses display in terminal.
 
 argv: Command to run. Otherwise capture trace until process is killed.
 
@@ -54,65 +61,71 @@ argv: Command to run. Otherwise capture trace until process is killed.
 
 
 sub validate {
-    die "need to specify one or more probes (-p), or the filename of a YAML file containing probes (-f)"
+    die "need to specify a probe (-p), or the filename of a YAML file containing the probe definition (-f)"
         if !defined opt->{probe} && !defined opt->{file};
 }
 
 
 our $ctx;
 our $output_fh;
+our $viewer;
 
 sub run {
     $ctx = Vmprobe::RunContext->new;
 
-    my $probes = [ map { Vmprobe::Util::parse_key_value($_) } @{ opt->{probe} } ];
+    my $remote_cache = Vmprobe::RemoteCache->new;
 
-    my $te = Vmprobe::TraceEngine->new(
-                 probes => $probes,
-                 cb => \&handle_probe_result,
+    my $probe_params = Vmprobe::Util::parse_key_value(opt->{probe});
+
+    my $probe = Vmprobe::Probe->new(
+                 remote_cache => $remote_cache,
+                 params => $probe_params,
              );
 
-
-    my $trace_summary = $te->summary();
-    my $trace_summary_encoded = sereal_encode($trace_summary);
+    my $summary = $probe->summary();
+    my $summary_encoded = sereal_encode($summary);
 
     if (defined opt->{output}) {
-        say STDERR "Saving new trace $trace_summary->{trace_id} to file '" . opt->{output} . "'" unless opt->{quiet};
+        diagnostic("Saving new trace $summary->{trace_id} to file '" . opt->{output} . "'");
 
         open($output_fh, '>', opt->{output}) || die "couldn't open output file " . opt->{output} . " for writing: $!";
-        print $output_fh pack("w", length($trace_summary_encoded));
-        print $output_fh $trace_summary_encoded;
+        print $output_fh pack("w", length($summary_encoded));
+        print $output_fh $summary_encoded;
     } else {
-        say STDERR "Saving new trace $trace_summary->{trace_id} to DB" unless opt->{quiet};
+        diagnostic("Saving new trace $summary->{trace_id} to DB");
         ## FIXME: save to DB
     }
 
-use Data::Dumper; print "SUMMARY: " . Dumper($trace_summary);
+if(!$viewer){
+use Data::Dumper;
+print Dumper($summary);
+}
+    $viewer = Vmprobe::Viewer->new(probe_summaries => [ $summary ]) if opt->{curses};
 
-    say STDERR "Taking initial snapshot..." unless opt->{quiet};
+    diagnostic("Taking initial snapshot...");
 
-    $te->barrier();
+    $probe->once_blocking(\&handle_probe_result);
 
     if (opt->{single}) {
-        say STDERR "Done." unless opt->{quiet};
+        diagnostic("Done.");
         return;
     }
 
-    $te->start_poll();
+    $probe->start_poll(\&handle_probe_result);
 
     if (!@{ argv() }) {
-        say STDERR "Tracing... Stop with control-c" unless opt->{quiet};
+        diagnostic("Tracing... Stop with control-c");
         AE::cv->recv;
     }
 
-    say STDERR "Tracing command..." unless opt->{quiet};
+    diagnostic("Tracing command...");
 
     my $exit_code = AnyEvent::Util::run_cmd(argv)->recv;
 
-    say STDERR "Taking final snapshot..." unless opt->{quiet};
+    diagnostic("Taking final snapshot...");
 
-    $te->stop_poll();
-    $te->barrier();
+    $probe->stop_poll();
+    $probe->once_blocking(\&handle_probe_result);
 
     exit $exit_code;
 }
@@ -122,19 +135,35 @@ use Data::Dumper; print "SUMMARY: " . Dumper($trace_summary);
 sub handle_probe_result {
     my $result = shift;
 
+if(!$viewer){
 use Data::Dumper; print "PROBE RESULT: " . Dumper($result);
+print Dumper(Vmprobe::Cache::Snapshot::parse_records($result->{data}{snapshots}{mincore}, 10, 2));
+}
 
     my $result_encoded = sereal_encode($result);
+
+    #$viewer->update($result) if $viewer;
 
     if (defined opt->{output}) {
         print $output_fh pack("w", length($result_encoded));
         print $output_fh $result_encoded;
     } else {
+        die;
+        #my $txn = $ctx->new_txn();
+        #$txn->commit;
     }
-    #my $txn = $ctx->new_txn();
-    #$txn->commit;
 }
 
+
+
+
+sub diagnostic {
+    my $msg = shift;
+
+    if (!opt->{quiet} && !$viewer) {
+        say STDERR $msg;
+    }
+}
 
 
 1;

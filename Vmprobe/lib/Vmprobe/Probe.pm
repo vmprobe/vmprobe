@@ -20,14 +20,35 @@ sub process_results { return $_[1] }
 sub new {
     my ($class, %args) = @_;
 
-    my $self = \%args;
-    bless $self, $class;
+    my $self = {};
+
+    $self->{params} = $args{params} || die "need params";
+
+    $self->{probe_id} = get_session_token();
+    $self->{start} = curr_time();
+
+    my $type = $self->{params}->{type} // 'cache';
+    my $pkg = "Vmprobe::Probe::$type";
+
+    eval "require $pkg" || die "unable to load probe type '$type' ($@)";
+    bless $self, $pkg;
 
     $self->init();
 
-    $self->{remote} = $self->{engine}->get_remote($self->{params}->{host}, $self->needs_sudo);
+    $self->{remote} = $args{remote_cache}->get(host => $self->{params}->{host}, needs_sudo => $self->needs_sudo);
 
     return $self;
+}
+
+
+sub summary {
+    my ($self) = @_;
+
+    return {
+        probe_id => $self->{probe_id},
+        start => $self->{start},
+        params => $self->{params},
+    };
 }
 
 
@@ -54,6 +75,23 @@ sub once {
                                });
                            },
                            $connection_id);
+}
+
+
+sub once_blocking {
+    my ($self, $cb) = @_;
+
+    my $cv = AE::cv;
+
+    $cv->begin;
+
+    $self->once(sub {
+        my $result = shift;
+        $cb->($result);
+        $cv->end;
+    });
+
+    $cv->wait;
 }
 
 
