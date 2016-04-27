@@ -704,7 +704,7 @@ record_container parser::get_record_container() {
 
 
 void record_container::sort_by_num_resident_pages() {
-    std::sort(records.begin(), records.end(), [](record a, record b){ return a.num_resident < b.num_resident; });
+    std::sort(records.begin(), records.end(), [](record a, record b){ return a.num_resident > b.num_resident; });
 }
 
 
