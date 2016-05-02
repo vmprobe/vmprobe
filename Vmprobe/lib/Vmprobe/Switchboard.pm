@@ -10,12 +10,8 @@ use Linux::Inotify2;
 sub new {
     my ($class, $dir) = @_;
 
-    if (defined $dir) {
-        die "argument $dir not a directory" if !-d $dir;
-    } else {
-        require File::Temp;
-        $dir = File::Temp::tempdir(CLEANUP => 1);
-    }
+    die "need dir argument" if !defined $dir;
+    die "argument $dir not a directory" if !-d $dir;
 
     my $self = { dir => $dir };
     bless $self, $class;
@@ -43,6 +39,8 @@ sub trigger {
     open(my $fh, '>>', $filename) || die "unable to open file: $filename";
 
     utime(undef, undef, $fh) || die "unable to touch file: $filename";
+
+    return $self;
 }
 
 
