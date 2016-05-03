@@ -11,9 +11,13 @@ use Vmprobe::Util;
 use Vmprobe::RunContext;
 use Vmprobe::Probe;
 use Vmprobe::RemoteCache;
+
 use Vmprobe::Viewer;
 use Vmprobe::Cache::Snapshot;
-#use Vmprobe::DB::Object;
+
+use Vmprobe::DB::Probe;
+use Vmprobe::DB::EntryByProbe;
+use Vmprobe::DB::Entry;
 
 
 our $spec = q{
@@ -25,10 +29,6 @@ opt:
     type: Str
     alias: p
     doc: Probe definition, key=value pairs separated by white-space.
-  file:
-    type: Str
-    alias: f
-    doc: Filename of a YAML file specifying probes.
   single:
     type: Bool
     alias: 1
@@ -37,10 +37,6 @@ opt:
     type: Str[]
     alias: t
     doc: Tags to associate with this trace.
-  output:
-    type: Str
-    alias: o
-    doc: Output file to save trace. If not specified, save in .vmprobe DB.
   verbose:
     type: Bool
     alias: v
@@ -61,18 +57,14 @@ argv: Command to run. Otherwise capture trace until process is killed.
 
 
 sub validate {
-    die "need to specify a probe (-p), or the filename of a YAML file containing the probe definition (-f)"
-        if !defined opt->{probe} && !defined opt->{file};
+    die "need to specify a probe (-p)" if !defined opt->{probe};
 }
 
 
-our $ctx;
-our $output_fh;
 our $viewer;
+our $summary;
 
 sub run {
-    $ctx = Vmprobe::RunContext->new;
-
     my $remote_cache = Vmprobe::RemoteCache->new;
 
     my $probe_params = Vmprobe::Util::parse_key_value(opt->{probe});
@@ -82,29 +74,28 @@ sub run {
                  params => $probe_params,
              );
 
-    my $summary = $probe->summary();
-    my $summary_encoded = sereal_encode($summary);
+    $summary = $probe->summary();
 
-    if (defined opt->{output}) {
-        diagnostic("Saving new trace $summary->{trace_id} to file '" . opt->{output} . "'");
+    {
+        diagnostic("Saving new probe $summary->{probe_id} to DB");
 
-        open($output_fh, '>', opt->{output}) || die "couldn't open output file " . opt->{output} . " for writing: $!";
-        print $output_fh pack("w", length($summary_encoded));
-        print $output_fh $summary_encoded;
-    } else {
-        diagnostic("Saving new trace $summary->{trace_id} to DB");
-        ## FIXME: save to DB
+        my $txn = new_lmdb_txn();
+        Vmprobe::DB::Probe->new($txn)->insert($summary->{probe_id}, $summary);
+        $txn->commit;
     }
 
 if(!$viewer){
 use Data::Dumper;
 print Dumper($summary);
 }
-    $viewer = Vmprobe::Viewer->new(probe_summaries => [ $summary ]) if opt->{curses};
+    #$viewer = Vmprobe::Viewer->new(probe_summaries => [ $summary ]) if opt->{curses};
 
     diagnostic("Taking initial snapshot...");
 
     $probe->once_blocking(\&handle_probe_result);
+
+    ## Trigger new probe once we have first entry because viz scans back through entry table to find new probes
+    switchboard->trigger('new-probe');
 
     if (opt->{single}) {
         diagnostic("Done.");
@@ -135,23 +126,24 @@ print Dumper($summary);
 sub handle_probe_result {
     my $result = shift;
 
+    {
+        my $txn = new_lmdb_txn();
+
+        my $timestamp = curr_time();
+
+        Vmprobe::DB::EntryByProbe->new($txn)->insert($summary->{probe_id}, $timestamp);
+        Vmprobe::DB::Entry->new($txn)->insert($timestamp, $result);
+
+        $txn->commit;
+
+        switchboard->trigger("new-entry")
+                   ->trigger("probe-" . $summary->{probe_id});
+    }
+
 if(!$viewer){
 use Data::Dumper; print "PROBE RESULT: " . Dumper($result);
 print Dumper(Vmprobe::Cache::Snapshot::parse_records($result->{data}{snapshots}{mincore}, 10, 2));
 }
-
-    my $result_encoded = sereal_encode($result);
-
-    #$viewer->update($result) if $viewer;
-
-    if (defined opt->{output}) {
-        print $output_fh pack("w", length($result_encoded));
-        print $output_fh $result_encoded;
-    } else {
-        die;
-        #my $txn = $ctx->new_txn();
-        #$txn->commit;
-    }
 }
 
 

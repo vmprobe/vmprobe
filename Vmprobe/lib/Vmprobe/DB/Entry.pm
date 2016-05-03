@@ -1,13 +1,13 @@
-package Vmprobe::DB::Probe;
+package Vmprobe::DB::Entry;
 
 use common::sense;
 
 use parent 'Vmprobe::DB::Base';
 
 
-sub db_name { 'probe' }
+sub db_name { 'entry' }
 
-sub key_type { 'raw' }
+sub key_type { 'int' }
 sub value_type { 'sereal' }
 
 

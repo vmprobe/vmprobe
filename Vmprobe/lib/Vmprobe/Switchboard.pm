@@ -4,6 +4,7 @@ use common::sense;
 
 use AnyEvent;
 use Linux::Inotify2;
+use Scalar::Util;
 
 
 
@@ -44,6 +45,22 @@ sub trigger {
 }
 
 
+
+{
+    package Vmprobe::Switchboard::Watcher;
+
+    sub DESTROY {
+        my $self = shift;
+
+        return if !$self->{switchboard};
+
+        delete $self->{switchboard}->{cbs}->{$self->{channel}}->{0 + $self};
+        delete $self->{switchboard}->{cbs}->{$self->{channel}}
+            if !keys %{ $self->{switchboard}->{cbs}->{$self->{channel}} };
+    }
+}
+
+
 sub listen {
     my ($self, $channel, $cb) = @_;
 
@@ -59,8 +76,11 @@ sub listen {
     }
 
     my $cbs = ($self->{cbs} ||= {});
-    die "already listening for channel $channel" if $cbs->{$channel};
-    $cbs->{$channel} = $cb;
+
+    my $watcher = bless { channel => $channel, switchboard => $self, }, 'Vmprobe::Switchboard::Watcher';
+    Scalar::Util::weaken($watcher->{switchboard});
+
+    $cbs->{$channel}->{0 + $watcher} = $cb;
 
     $self->{io_handler} ||= sub {
         my $e = shift;
@@ -70,10 +90,14 @@ sub listen {
 
         if ($cbs->{$channel}) {
             if ($e->IN_DELETE_SELF) {
-                $cbs->{$channel}->(1);
+                foreach my $cb (values %{ $cbs->{$channel} }) {
+                    $cb->(1);
+                }
                 $e->w->cancel;
             } else {
-                $cbs->{$channel}->(0);
+                foreach my $cb (values %{ $cbs->{$channel} }) {
+                    $cb->(0);
+                }
             }
         } else {
             $e->w->cancel;
@@ -87,6 +111,8 @@ sub listen {
     ## Short race condition here: filename could be unlinked
 
     $self->{inotify}->watch($filename, IN_ATTRIB|IN_DELETE_SELF, $self->{io_handler});
+
+    return $watcher;
 }
 
 

@@ -13,26 +13,18 @@ sub new {
     my $self = \%args;
     bless $self, $class;
 
-    die "must specify one or more probes" if !@{ $self->{probes} };
+    die "must specify a probe" if !$self->{probe};
 
     $self->{remotes_cache} = {};
-    $self->{probe_objs} = [];
     $self->{trace_id} = get_session_token();
     $self->{start} = curr_time();
 
-    my $probe_num = 0;
+    my $type = $probe->{type} // 'cache';
+    my $pkg = "Vmprobe::Probe::$type";
 
-    foreach my $probe (@{ $self->{probes} }) {
-        my $type = $probe->{type} // 'cache';
-        my $pkg = "Vmprobe::Probe::$type";
+    eval "require $pkg" || die "unable to load probe type '$type' ($@)";
 
-        eval "require $pkg" || die "unable to load probe type '$type' ($@)";
-
-        my $probe_obj = &{ "Vmprobe::Probe::new" }($pkg, params => $probe, engine => $self, probe_num => $probe_num, );
-        $probe_num++;
-
-        push @{ $self->{probe_objs} }, $probe_obj;
-    }
+    $self->{probe_obj} = &{ "Vmprobe::Probe::new" }($pkg, params => $probe, engine => $self, probe_num => $probe_num, );
 
     return $self;
 }

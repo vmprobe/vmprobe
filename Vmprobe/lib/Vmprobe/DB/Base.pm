@@ -45,12 +45,12 @@ sub new {
             die "unknown key type: $key_type";
         }
 
-        if ($value_type eq 'int') {
-            $flags |= MDB_INTEGERDUP;
-        }
-
         if ($self->dup_keys) {
             $flags |= MDB_DUPSORT;
+
+            if ($value_type eq 'int') {
+                $flags |= MDB_INTEGERDUP;
+            }
         }
 
         $dbi = $dbname_to_dbi->{$db_name} = $txn->open($db_name, $flags);
@@ -149,18 +149,9 @@ sub get {
 
     return undef if !defined $value;
 
-
-    my $value_type = $self->value_type;
-
-    if ($value_type eq 'sereal') {
-        return sereal_decode($value);
-    } elsif ($value_type eq 'raw' || $value_type eq 'int') {
-        ## nothing
-        return $value;
-    } else {
-        die "unknown value type: $value_type";
-    }
+    return ${ $self->_decode_value(\$value) };
 }
+
 
 sub delete {
     my ($self, $key) = @_;
@@ -181,10 +172,92 @@ sub foreach {
 
 
 
+sub iterate {
+    my ($self, $params) = @_;
+
+    my $cursor = $self->{db}->Cursor;
+
+    my ($key, $value);
+
+
+    $key = $params->{start} if defined $params->{start};
+
+    eval {
+        $cursor->get($key, $value, $params->{start} ? 0 : ($params->{backward} ? MDB_LAST : MDB_FIRST));
+    };
+
+    return if $@;
+
+    $params->{cb}->($key, ${ $self->_decode_value(\$value) }) if !$params->{skip_start} || $key ne $params->{start};
+
+
+    my $direction = $params->{backward} ? MDB_PREV : MDB_NEXT;
+
+    while(1) {
+        eval {
+            $cursor->get($key, $value, $direction);
+        };
+
+        return if $@;
+
+        $params->{cb}->($key, ${ $self->_decode_value(\$value) });
+    }
+}
+
+
+sub iterate_dups {
+    my ($self, $params) = @_;
+
+    my $cursor = $self->{db}->Cursor;
+
+    my ($key, $value);
+
+
+    $key = $params->{key} // die "need key to iterate over dups";
+
+    $value = $params->{start} if defined $params->{start};
+
+    eval {
+        $cursor->get($key, $value, $params->{start} ? 0 : ($params->{backward} ? MDB_LAST_DUP : MDB_FIRST_DUP));
+    };
+
+    return if $@;
+
+    $params->{cb}->($key, ${ $self->_decode_value(\$value) }) if !$params->{skip_start} || $key ne $params->{start};
+
+
+    my $direction = $params->{backward} ? MDB_PREV_DUP : MDB_NEXT_DUP;
+
+    while(1) {
+        eval {
+            $cursor->get($key, $value, $direction);
+        };
+
+        return if $@;
+
+        $params->{cb}->($key, ${ $self->_decode_value(\$value) });
+    }
+}
 
 
 #################
 
+
+
+
+sub _decode_value {
+    my ($self, $value_ref) = @_;
+
+    my $value_type = $self->value_type;
+
+    if ($value_type eq 'sereal') {
+        return \sereal_decode($$value_ref);
+    } elsif ($value_type eq 'raw' || $value_type eq 'int') {
+        return $value_ref;
+    } else {
+        die "unknown value type: $value_type";
+    }
+}
 
 
 sub _foreach_db {

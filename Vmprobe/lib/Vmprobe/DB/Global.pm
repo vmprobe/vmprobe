@@ -5,10 +5,10 @@ use common::sense;
 use parent 'Vmprobe::DB::Base';
 
 
-sub db_name { 'global' };
+sub db_name { 'global' }
 
-sub key_type { 'raw' };
-sub value_type { 'raw' };
+sub key_type { 'raw' }
+sub value_type { 'raw' }
 
 
 sub check_arch {

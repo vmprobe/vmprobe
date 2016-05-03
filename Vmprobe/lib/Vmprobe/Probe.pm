@@ -68,9 +68,9 @@ sub once {
                                my $data = $self->process_results(@_);
 
                                $cb->({
+                                   probe_id => $self->{probe_id},
                                    start => $start,
                                    end => $end,
-                                   probe_num => $self->{probe_num},
                                    data => $data,
                                });
                            },
