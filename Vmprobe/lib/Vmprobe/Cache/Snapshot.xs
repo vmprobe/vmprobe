@@ -186,6 +186,31 @@ summarize(snapshot_sv, buckets)
 
 
 
+unsigned long
+popcount(snapshot_sv)
+        SV *snapshot_sv
+    INIT:
+        char *snapshot_p;
+        size_t snapshot_len;
+        uint64_t num_resident;
+
+        snapshot_len = SvCUR(snapshot_sv);
+        snapshot_p = SvPV(snapshot_sv, snapshot_len);
+
+    CODE:
+        try {
+            vmprobe::cache::snapshot::parser p(snapshot_p, snapshot_len);
+
+            num_resident = p.popcount();
+        } catch(std::runtime_error &e) {
+            croak(e.what());
+        }
+
+        RETVAL = num_resident;
+    OUTPUT:
+        RETVAL
+
+
 
 SV *
 parse_records(snapshot_sv, num_buckets, limit)

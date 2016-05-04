@@ -160,6 +160,7 @@ class parser : public vmprobe::cache::binformat::parser {
     void process(parser_element_handler_cb cb);
     record_container get_record_container();
     element *next();
+    uint64_t popcount();
 
     uint64_t pagesize;
     uint64_t flags;

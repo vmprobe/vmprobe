@@ -35,7 +35,7 @@ sub new {
         my $flags = MDB_CREATE;
 
         my $key_type = $self->key_type;
-        my $value_type = $self->key_type;
+        my $value_type = $self->value_type;
 
         if ($key_type eq 'autoinc' || $key_type eq 'int') {
             $flags |= MDB_INTEGERKEY;
@@ -208,6 +208,12 @@ sub iterate {
 sub iterate_dups {
     my ($self, $params) = @_;
 
+
+    die "DB not declared dup_keys" if !$self->dup_keys();
+
+    die "backwards not yet supported on dups" if $params->{backward};
+
+
     my $cursor = $self->{db}->Cursor;
 
     my ($key, $value);
@@ -218,12 +224,12 @@ sub iterate_dups {
     $value = $params->{start} if defined $params->{start};
 
     eval {
-        $cursor->get($key, $value, $params->{start} ? 0 : ($params->{backward} ? MDB_LAST_DUP : MDB_FIRST_DUP));
+        $cursor->get($key, $value, MDB_GET_BOTH_RANGE);
     };
 
     return if $@;
 
-    $params->{cb}->($key, ${ $self->_decode_value(\$value) }) if !$params->{skip_start} || $key ne $params->{start};
+    $params->{cb}->($key, ${ $self->_decode_value(\$value) }) if !$params->{skip_start} || $value ne $params->{start};
 
 
     my $direction = $params->{backward} ? MDB_PREV_DUP : MDB_NEXT_DUP;
@@ -237,6 +243,31 @@ sub iterate_dups {
 
         $params->{cb}->($key, ${ $self->_decode_value(\$value) });
     }
+}
+
+
+
+sub last_dup {
+    my ($self, $params) = @_;
+
+    die "DB not declared dup_keys" if !$self->dup_keys();
+
+    my $cursor = $self->{db}->Cursor;
+
+    my ($key, $value);
+
+
+    $key = $params->{key} // die "need key to iterate over dups";
+
+    eval {
+        $cursor->get($key, $value, MDB_SET_KEY);
+    };
+
+    return if $@;
+
+    $cursor->get($key, $value, MDB_LAST_DUP);
+
+    return $value;
 }
 
 

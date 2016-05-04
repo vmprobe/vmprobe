@@ -2,6 +2,7 @@ package Vmprobe::Viewer;
 
 use common::sense;
 
+use Curses;
 use Curses::UI::AnyEvent;
 
 use Vmprobe::Util;
@@ -21,17 +22,18 @@ sub new {
 
 
     $self->{cui} = Curses::UI::AnyEvent->new(-color_support => 1, -mouse_support => 0, -utf8 => 1,);
-$self->{cui}->leave_curses if $ENV{LEAVE_CURSES};
 
     $self->{cui}->set_binding(sub { exit }, "\cC");
     $self->{cui}->set_binding(sub { exit }, "q");
 
     $self->{main_window} = $self->{cui}->add('main', 'Window');
     $self->{notebook} = $self->{main_window}->add(undef, 'Notebook');
+    $self->{notebook}->set_binding('goto_prev_page', KEY_LEFT());
+    $self->{notebook}->set_binding('goto_next_page', KEY_RIGHT());
 
     $self->{probes_list_page} = $self->{notebook}->add_page("Probes");
-    $self->{probes_list_page_widget} = $self->{probes_list_page}->add('probes list page', 'Vmprobe::Viewer::ProbeList',
-                                                                      -focusable => 0, summaries => $self->{summaries});
+    $self->{probes_list_page_widget} =
+        $self->{probes_list_page}->add('probes list page', 'Vmprobe::Viewer::ProbeList', -focusable => 0, viewer => $self);
 
 
     $self->{new_probes_watcher} = switchboard->listen('new-probe', sub {
@@ -46,6 +48,22 @@ $self->{cui}->leave_curses if $ENV{LEAVE_CURSES};
     $self->{cui}->startAsync();
 
     return $self;
+}
+
+
+
+sub open_probe_screen {
+    my ($self, $probe_id) = @_;
+
+    my $summary = $self->{summaries}->{$probe_id} || die "no such probe id: $probe_id";
+
+    if (!exists $self->{probe_screens}->{$probe_id}) {
+        $self->{probe_screens}->{$probe_id} = $self->{notebook}->add_page($probe_id);
+        $self->{probe_screen_widgets}->{$probe_id} =
+            $self->{probe_screens}->{$probe_id}->add("$probe_id widget", 'Vmprobe::Viewer::Probe', -focusable => 0, viewer => $self);
+    }
+
+    $self->{cui}->draw;
 }
 
 
@@ -78,12 +96,15 @@ sub find_new_active_probes {
                     $self->{curr_entries}->{$probe_id} = $halt_time;
                     $self->{probe_watcher}->{$probe_id} = switchboard->listen("probe-$probe_id", sub {
                         $self->find_new_probe_entries($probe_id, undef);
+                        $self->{cui}->draw;
                     });
                     $self->find_new_probe_entries($probe_id, $txn);
                 }
             },
         });
     }
+
+    $self->{cui}->draw;
 
     $txn->commit;
 }
@@ -103,7 +124,7 @@ sub find_new_probe_entries {
         cb => sub {
             my ($k, $v) = @_;
 
-            $self->{curr_entries}->{$probe_id} = $k;
+            $self->{curr_entries}->{$probe_id} = $v;
             my $entry = $entry_db->get($v);
 
             $self->{probes_list_page_widget}->new_entry($probe_id, $entry);

@@ -686,6 +686,17 @@ void parser::process(parser_element_handler_cb cb) {
 
 
 
+uint64_t parser::popcount() {
+    element *e;
+    uint64_t num_resident = 0;
+
+    while ((e = next())) {
+        num_resident += e->bf.popcount();
+    }
+
+    return num_resident;
+}
+
 
 
 record_container parser::get_record_container() {
