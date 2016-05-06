@@ -5,7 +5,10 @@ use common::sense;
 use Curses;
 
 use Vmprobe::Util;
+use Vmprobe::RunContext;
 use Vmprobe::Cache::Snapshot;
+use Vmprobe::DB::Probe;
+use Vmprobe::DB::Entry;
 
 use parent 'Curses::UI::Widget';
 
@@ -25,6 +28,21 @@ sub new {
 
     my $self = $class->SUPER::new( %args );
 
+    {
+        my $txn = new_lmdb_txn();
+
+        $self->{summary} = Vmprobe::DB::Probe->new($txn)->get($self->{probe_id});
+
+        $txn->commit;
+    }
+
+    $self->{new_probes_watcher} = switchboard->listen("probe-$self->{probe_id}", sub {
+        $self->find_new_entries();
+        $self->draw(0) if !$self->hidden && $self->in_topwindow;
+    });
+
+    $self->find_new_entries();
+
     return $self;
 }
 
@@ -35,7 +53,28 @@ sub draw {
 
     $self->SUPER::draw(1) or return $self;
 
+    my $curr_line = 0;
 
+    my $parsed = Vmprobe::Cache::Snapshot::parse_records($self->{latest_entry}{data}{snapshots}{mincore}, $self->width, 100);
+
+    foreach my $record (@$parsed) {
+        $self->{-canvasscr}->addstring($curr_line, 0, "$self->{summary}->{params}->{path}$record->{filename} " . pages2size($record->{num_resident_pages}) . "/" . pages2size($record->{num_pages}));
+        $self->{-canvasscr}->addstring($curr_line+1, 0, buckets_to_rendered($record));
+        $curr_line += 2;
+    }
+
+
+    #use Data::Dumper; $self->{-canvasscr}->addstr($curr_line, 0,
+#      Dumper([Vmprobe::Cache::Snapshot::parse_records($self->{latest_entry}{data}{snapshots}{mincore}, 10, 2),
+#$self->width,
+#$self->height,
+#]
+#)
+#    );
+
+    #        $self->{-canvasscr}->attron(Curses::COLOR_PAIR($Curses::UI::color_object->get_color_pair('white', 'blue')));
+    #        $self->{-canvasscr}->addstring(" \x{2588}\x{2586}\x{2584}");
+    #        $self->{-canvasscr}->attroff(Curses::A_COLOR);
 
 
     $self->{-canvasscr}->noutrefresh();
@@ -44,8 +83,48 @@ sub draw {
 }
 
 
-sub new_entry {
-    my ($self, $probe_id, $entry) = @_;
+sub buckets_to_rendered {
+    my ($parsed) = @_;
+
+    return join('',
+                map {
+                    $_ == 0 ? ' ' :
+                    $_ == $parsed->{pages_per_bucket} ? "\x{2588}" :
+                    chr(0x2581 + int(8 * $_ / $parsed->{pages_per_bucket}))
+                }
+                @{ $parsed->{buckets} });
+}
+
+
+
+sub find_new_entries {
+    my ($self) = @_;
+
+    my $txn = new_lmdb_txn();
+
+    my $entry_db = Vmprobe::DB::Entry->new($txn);
+
+    Vmprobe::DB::EntryByProbe->new($txn)->iterate_dups({
+        key => $self->{probe_id},
+        offset => $self->{last_update} // (curr_time() - 3600),
+        cb => sub {
+            my ($k, $v) = @_;
+
+            $self->{last_update} = $v;
+            my $entry = $entry_db->get($v);
+
+            $self->process_new_entry($entry);
+        },
+    });
+
+    $txn->commit;
+}
+
+
+sub process_new_entry {
+    my ($self, $entry) = @_;
+
+    $self->{latest_entry} = $entry;
 }
 
 

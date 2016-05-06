@@ -18,6 +18,7 @@ use Vmprobe::Cache::Snapshot;
 use Vmprobe::DB::Probe;
 use Vmprobe::DB::EntryByProbe;
 use Vmprobe::DB::Entry;
+use Vmprobe::DB::ProbeUpdateTimes;
 
 
 our $spec = q{
@@ -63,6 +64,7 @@ sub validate {
 
 our $viewer;
 our $summary;
+our $last_update_time;
 
 sub run {
     my $remote_cache = Vmprobe::RemoteCache->new;
@@ -84,6 +86,8 @@ sub run {
         $txn->commit;
     }
 
+    switchboard->trigger('new-probe');
+
 if(!$viewer){
 use Data::Dumper;
 print Dumper($summary);
@@ -93,9 +97,6 @@ print Dumper($summary);
     diagnostic("Taking initial snapshot...");
 
     $probe->once_blocking(\&handle_probe_result);
-
-    ## Trigger new probe once we have first entry because viz scans back through entry table to find new probes
-    switchboard->trigger('new-probe');
 
     if (opt->{single}) {
         diagnostic("Done.");
@@ -134,7 +135,13 @@ sub handle_probe_result {
         Vmprobe::DB::EntryByProbe->new($txn)->insert($summary->{probe_id}, $timestamp);
         Vmprobe::DB::Entry->new($txn)->insert($timestamp, $result);
 
+        my $update_times_db = Vmprobe::DB::ProbeUpdateTimes->new($txn);
+        $update_times_db->insert($timestamp, $summary->{probe_id});
+        $update_times_db->delete($last_update_time) if defined $last_update_time;
+
         $txn->commit;
+
+        $last_update_time = $timestamp;
 
         switchboard->trigger("new-entry")
                    ->trigger("probe-" . $summary->{probe_id});

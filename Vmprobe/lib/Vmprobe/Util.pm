@@ -3,7 +3,7 @@ package Vmprobe::Util;
 use common::sense;
 
 use Exporter 'import';
-our @EXPORT = qw(pages2size colour get_session_token abbreviate_perl_exception sereal_encode sereal_decode curr_time);
+our @EXPORT = qw(pages2size colour get_session_token abbreviate_perl_exception sereal_encode sereal_decode curr_time format_duration);
 
 
 
@@ -64,6 +64,28 @@ sub pages2size {
 }
 
 
+
+sub format_duration {
+    my $dur = shift;
+
+    if ($dur < 1) {
+        #return sprintf("%.1fms", 1000.0 * $dur);
+        return "<1s";
+    } elsif ($dur < 60) {
+        #return sprintf("%ds", int($dur));
+        return "<1m";
+    } elsif ($dur < 3600) {
+        return sprintf("%dm", int($dur/60));
+    } elsif ($dur < 86400) {
+        return sprintf("%dh%dm", int($dur/3600), int(($dur%3600)/60));
+    } else {
+        return sprintf("%dd%dh%dm", int($dur/86400), int(($dur%86400)/3600), int(($dur%3600)/60));
+    }
+}
+
+
+
+## FIXME: deprecated
 sub format_time {
     my $time = shift;
 
@@ -168,7 +190,7 @@ sub sereal_decode {
 }
 
 
-sub curr_time {
+sub curr_time () {
     require Time::HiRes;
 
     my @t = Time::HiRes::gettimeofday();
