@@ -30,7 +30,7 @@ sub new {
     $self->{notebook} = $self->{main_window}->add(undef, 'Notebook');
     $self->{notebook}->set_binding('goto_prev_page', KEY_LEFT());
     $self->{notebook}->set_binding('goto_next_page', KEY_RIGHT());
-    $self->{notebook}->set_binding(\&close_page, 'x');
+    $self->{notebook}->set_binding(sub { $self->close_page(); }, 'x');
 
     $self->{probes_list_page} = $self->{notebook}->add_page("Probes");
     $self->{probes_list_page_widget} =
@@ -62,20 +62,25 @@ sub open_probe_screen {
     }
 
     $self->{notebook}->activate_page($probe_id);
-
+    $self->{notebook}->layout;
     $self->{cui}->draw;
 }
 
 
 
 sub close_page {
-    my ($self) = @_; ## $self is notebook object
+    my ($self) = @_;
 
-    return if @{ $self->{-pages} } <= 1;
+    return if @{ $self->{notebook}->{-pages} } <= 1;
 
-    $self->delete_page($self->active_page);
-    $self->layout;
-    $self->root->draw(1);
+    my $page_id = $self->{notebook}->active_page;
+
+    $self->{notebook}->delete_page($page_id);
+    delete $self->{probe_screens}->{$page_id}; ## FIXME: not necessarily a probe page
+    delete $self->{probe_screen_widgets}->{$page_id}; ## FIXME: not necessarily a probe page
+    delete $self->{notebook}->{-id2object}->{$page_id}; ## work-around notebook not cleaning up properly
+    $self->{notebook}->layout;
+    $self->{cui}->draw;
 }
 
 
