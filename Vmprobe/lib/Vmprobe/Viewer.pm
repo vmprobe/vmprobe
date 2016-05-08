@@ -13,6 +13,17 @@ use Vmprobe::DB::EntryByProbe;
 use Vmprobe::DB::Entry;
 
 
+our $help_text = q{vmprobe viz help
+
+left/right - switch tabs
+up/down    - select probe
+enter      - open probe in new tab
+?          - this help screen
+x          - close tab
+q          - quit
+};
+
+
 sub new {
     my ($class, %args) = @_;
 
@@ -25,6 +36,7 @@ sub new {
 
     $self->{cui}->set_binding(sub { exit }, "\cC");
     $self->{cui}->set_binding(sub { exit }, "q");
+    $self->{cui}->set_binding(sub { $self->{cui}->dialog(-message => $help_text) }, "?");
 
     $self->{main_window} = $self->{cui}->add('main', 'Window');
     $self->{notebook} = $self->{main_window}->add(undef, 'Notebook');

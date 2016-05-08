@@ -64,19 +64,6 @@ sub draw {
     }
 
 
-    #use Data::Dumper; $self->{-canvasscr}->addstr($curr_line, 0,
-#      Dumper([Vmprobe::Cache::Snapshot::parse_records($self->{latest_entry}{data}{snapshots}{mincore}, 10, 2),
-#$self->width,
-#$self->height,
-#]
-#)
-#    );
-
-    #        $self->{-canvasscr}->attron(Curses::COLOR_PAIR($Curses::UI::color_object->get_color_pair('white', 'blue')));
-    #        $self->{-canvasscr}->addstring(" \x{2588}\x{2586}\x{2584}");
-    #        $self->{-canvasscr}->attroff(Curses::A_COLOR);
-
-
     $self->{-canvasscr}->noutrefresh();
 
     doupdate() unless $no_doupdate;
