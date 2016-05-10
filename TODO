@@ -5,16 +5,14 @@ command line ui:
   * Improve help output.. should show "vmprobe [cmd] <args>" example template
 
 curses ui:
-  * probe screens
-
-needs latest:
-    * real-time file list
-    * super expanded version of file that takes up whole screen
-
-needs history
-    * history of single file
-    * real-time file-based deltas
-    * snapshot history viewer
+  probe screens:
+    needs latest:
+      * real-time file list
+      * super expanded version of file that takes up whole screen
+    needs history
+      * history of single file
+      * real-time file-based deltas
+      * snapshot history viewer
   ? paged scrolling
 
 snapshots:

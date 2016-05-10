@@ -209,7 +209,6 @@ sub iterate_dups {
     my ($self, $params) = @_;
 
     die "DB not declared dup_keys" if !$self->dup_keys();
-    die "need offset" if !defined $params->{offset};
 
 
     my $cursor = $self->{db}->Cursor;
@@ -219,18 +218,38 @@ sub iterate_dups {
 
     $key = $params->{key} // die "need key to iterate over dups";
 
-    $value = $params->{offset};
+    if ($params->{offset}) {
+        die "offset doesn't support reverse yet" if defined $params->{reverse};
 
-    eval {
-        $cursor->get($key, $value, MDB_SET_RANGE);
-    };
+        $value = $params->{offset};
 
-    return if $@;
+        eval {
+            $cursor->get($key, $value, MDB_SET_RANGE);
+        };
 
-    $params->{cb}->($key, ${ $self->_decode_value(\$value) }) if $value ne $params->{offset};
+        return if $@;
+
+        $params->{cb}->($key, ${ $self->_decode_value(\$value) }) if $value ne $params->{offset};
+    } else {
+        eval {
+            $cursor->get($key, $value, MDB_SET);
+        };
+
+        return if $@;
+
+        if ($params->{reverse}) {
+            eval {
+                $cursor->get($key, $value, MDB_LAST_DUP);
+            };
+
+            return if $@;
+        }
+
+        $params->{cb}->($key, ${ $self->_decode_value(\$value) });
+    }
 
 
-    my $direction = MDB_NEXT_DUP;
+    my $direction = $params->{reverse} ? MDB_PREV_DUP : MDB_NEXT_DUP;
 
     while(1) {
         eval {

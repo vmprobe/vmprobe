@@ -83,7 +83,7 @@ sub open_probe_screen {
 sub close_page {
     my ($self) = @_;
 
-    return if @{ $self->{notebook}->{-pages} } <= 1;
+    exit if @{ $self->{notebook}->{-pages} } <= 1;
 
     my $page_id = $self->{notebook}->active_page;
 

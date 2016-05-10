@@ -42,6 +42,7 @@ sub new {
     });
 
     $self->find_new_entries();
+$self->collect_entries();
 
     return $self;
 }
@@ -63,6 +64,10 @@ sub draw {
         $curr_line += 2;
     }
 
+    foreach my $entry (@{ $self->{entries} }) {
+        $self->{-canvasscr}->addstring($curr_line, 0, "WERD $entry");
+        $curr_line++;
+    }
 
     $self->{-canvasscr}->noutrefresh();
 
@@ -82,6 +87,27 @@ sub buckets_to_rendered {
                 @{ $parsed->{buckets} });
 }
 
+
+
+sub collect_entries {
+    my ($self) = @_;
+
+    my $txn = new_lmdb_txn();
+
+    my $entry_db = Vmprobe::DB::Entry->new($txn);
+
+    ITER: {
+        Vmprobe::DB::EntryByProbe->new($txn)->iterate_dups({
+            key => $self->{probe_id},
+            reverse => 1,
+            cb => sub {
+                my ($k, $v) = @_;
+
+                push @{ $self->{entries} }, $v;
+            },
+        });
+    }
+}
 
 
 sub find_new_entries {
