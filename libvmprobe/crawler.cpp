@@ -70,7 +70,7 @@ void crawler::increment_nofile_rlimit() {
 
 
 
-void crawler::_crawl(std::string &path_std_string) {
+void crawler::_crawl(std::string &path_std_string, file_index &already_seen_files) {
     const char *path = path_std_string.c_str();
     struct ::stat sb;
 
@@ -87,7 +87,17 @@ void crawler::_crawl(std::string &path_std_string) {
     }
 
     if (skip_duplicate_hardlinks && sb.st_nlink > 1) {
-        // FIXME: detect duplicate links
+        file_index::iterator dev = already_seen_files.find(sb.st_dev);
+
+        // Haven't seen this device before, initialize it
+        if (dev == already_seen_files.end()) {
+            already_seen_files.emplace(sb.st_dev, std::unordered_set<ino_t> {sb.st_ino});
+        }
+        // Already seen this inode before
+        else if (!dev->second.insert(sb.st_ino).second) {
+            warning("skipping duplicate hardlink %s", path);
+            return;
+        }
     }
 
     if (S_ISDIR(sb.st_mode)) {
@@ -129,7 +139,7 @@ void crawler::_crawl(std::string &path_std_string) {
             std::string npath = path_std_string + std::string("/") + s;
 
             curr_crawl_depth++;
-            _crawl(npath);
+            _crawl(npath, already_seen_files);
             curr_crawl_depth--;
         }
     } else if (S_ISREG(sb.st_mode)) {
@@ -144,7 +154,9 @@ void crawler::_crawl(std::string &path_std_string) {
 void crawler::crawl(std::string &path) {
     std::string normalized_path = vmprobe::path::normalize(path);
 
-    _crawl(normalized_path);
+    file_index already_seen_files;
+
+    _crawl(normalized_path, already_seen_files);
 }
 
 }

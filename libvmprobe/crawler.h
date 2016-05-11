@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,6 +12,7 @@
 namespace vmprobe {
 
 using crawler_file_handler_cb = std::function<void(std::string &filename, struct ::stat &sb)>;
+using file_index = std::unordered_map<dev_t, std::unordered_set<ino_t>>;
 
 class crawler {
   public:
@@ -29,7 +32,7 @@ class crawler {
     std::vector<std::string> warnings;
 
   private:
-    void _crawl(std::string &path);
+    void _crawl(std::string &path, file_index &already_seen_files);
     void process_file(std::string &path_std_string, struct ::stat &sb);
     void warning(const char *format, ...);
     void fatal(const char *format, ...);
