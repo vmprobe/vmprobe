@@ -20,7 +20,7 @@ The [vmprobe install page](https://vmprobe.com/install) has pre-built linux pack
 
 There are some compile-time dependencies needed. On Ubuntu you should be able to get them with this command:
 
-    sudo apt-get install build-essential g++ libperl-dev cpanminus
+    sudo apt-get install build-essential g++ libperl-dev cpanminus liblmdb-dev
 
 Next you need to download the perl-time dependencies from CPAN. There is a script in this repo that you can run to do that:
 

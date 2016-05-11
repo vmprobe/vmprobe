@@ -41,6 +41,7 @@ my %module_build_args = (
     'Sereal::Encoder' => 0,
     'Digest::SHA3' => 0,
     'LMDB_File' => 0,
+    'Linux::Inotify2' => 0,
 
     ## Not needed anymore?
     'Plack' => 0,
