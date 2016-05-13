@@ -176,7 +176,7 @@ sub open_probe_screen {
 
     return if !defined $self->{selected_probe};
 
-    $self->{viewer}->open_probe_screen($self->{list_of_probes}->[$self->{selected_probe}]);
+    $self->{viewer}->open_probe_screen('EntryList', $self->{list_of_probes}->[$self->{selected_probe}]);
 }
 
 

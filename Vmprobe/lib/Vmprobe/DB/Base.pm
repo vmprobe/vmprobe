@@ -218,13 +218,14 @@ sub iterate_dups {
 
     $key = $params->{key} // die "need key to iterate over dups";
 
-    if ($params->{offset}) {
-        die "offset doesn't support reverse yet" if defined $params->{reverse};
+    if (exists $params->{offset}) {
+        die "offset doesn't support reverse yet" if $params->{reverse};
 
         $value = $params->{offset};
 
         eval {
-            $cursor->get($key, $value, MDB_SET_RANGE);
+            #$cursor->get($key, $value, MDB_SET_RANGE);
+            $cursor->get($key, $value, MDB_GET_BOTH_RANGE);
         };
 
         return if $@;

@@ -31,6 +31,14 @@ sub new {
         $txn->commit;
     }
 
+
+    my $bindings = $self->bindings();
+
+    foreach my $key (keys %{ $bindings }) {
+        $self->set_binding($bindings->{$key}, $key);
+    }
+
+
     $self->{new_entry_watcher} = switchboard->listen("probe-$self->{probe_id}", sub {
         $self->find_new_entries();
         $self->draw(0) if !$self->hidden && $self->in_topwindow;
@@ -47,10 +55,10 @@ sub draw {
     my $no_doupdate = shift || 0;
 
     $self->SUPER::draw(1) or return $self;
-    $self->{-canvasscr}->noutrefresh();
 
     $self->render($self->{-canvasscr});
 
+    $self->{-canvasscr}->noutrefresh();
     doupdate() unless $no_doupdate;
 }
 
@@ -59,13 +67,18 @@ sub draw {
 sub history_size { 1 }
 
 
+sub bindings { {} }
+
+
 sub render {
     die "must implement render";
 }
 
 
 sub process_entry {
-    die "must implement process_entry";
+    my ($self, $entry) = @_;
+
+    return $entry;
 }
 
 
@@ -95,9 +108,10 @@ sub backfill_entries {
     foreach my $entry_id (reverse @entry_ids) {
         my $entry = $entry_db->get($entry_id);
 
-        $self->{last_seen_entry} = $entry_id;
-        $self->process_entry($entry);
+        $self->process_entry_wrapper($entry_id, $entry);
     }
+
+    $txn->commit;
 }
 
 
@@ -116,14 +130,22 @@ sub find_new_entries {
 
             my $entry = $entry_db->get($v);
 
-            $self->{last_seen_entry} = $v;
-            $self->process_entry($entry);
+            $self->process_entry_wrapper($v, $entry);
         },
     });
 
     $txn->commit;
 }
 
+
+sub process_entry_wrapper {
+    my ($self, $entry_id, $entry) = @_;
+
+    $self->{last_seen_entry} = $entry_id;
+    unshift @{ $self->{entries} }, $self->process_entry($entry);
+
+    pop @{ $self->{entries} } if @{ $self->{entries} } > $self->history_size();
+}
 
 
 

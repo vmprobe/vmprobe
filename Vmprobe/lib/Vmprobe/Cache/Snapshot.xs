@@ -234,7 +234,7 @@ parse_records(snapshot_sv, num_buckets, limit)
             vmprobe::cache::snapshot::record_container container = p.get_record_container();
 
             container.sort_by_num_resident_pages();
-            container.limit(limit);
+            if (limit) container.limit(limit);
 
             for (auto &record : container.records) {
                 HV *rh = (HV *) sv_2mortal ((SV *) newHV());

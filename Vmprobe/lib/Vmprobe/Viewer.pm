@@ -58,22 +58,24 @@ sub new {
 
 
 sub open_probe_screen {
-    my ($self, $probe_id) = @_;
+    my ($self, $view_type, $probe_id) = @_;
 
-    if (!exists $self->{probe_screens}->{$probe_id}) {
-        my $page = $self->{notebook}->add_page($probe_id);
+    my $screen_id = "$view_type " . substr($probe_id, 0, 6) . "...";
+
+    if (!exists $self->{probe_screens}->{$screen_id}) {
+        my $page = $self->{notebook}->add_page($screen_id);
         if (!$page) {
             ## can't fit any more in notebook: FIXME: should indicate error
             $Curses::UI::screen_too_small = 0; ## work around curses::ui freezing up
             return;
         }
-        $self->{probe_screens}->{$probe_id} = $page;
-        $self->{probe_screen_widgets}->{$probe_id} =
-            $self->{probe_screens}->{$probe_id}->add("$probe_id widget", 'Vmprobe::Viewer::Probe', -focusable => 0,
-                                                     viewer => $self, probe_id => $probe_id);
+        $self->{probe_screens}->{$screen_id} = $page;
+        $self->{probe_screen_widgets}->{$screen_id} =
+            $self->{probe_screens}->{$screen_id}->add("$probe_id widget", "Vmprobe::Viewer::Probe::${view_type}", -focusable => 0,
+                                                      viewer => $self, probe_id => $probe_id);
     }
 
-    $self->{notebook}->activate_page($probe_id);
+    $self->{notebook}->activate_page($screen_id);
     $self->{notebook}->layout;
     $self->{cui}->draw;
 }
