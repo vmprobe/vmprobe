@@ -1,4 +1,4 @@
-package Vmprobe::Viewer::Probe::Files;
+package Vmprobe::Viewer::Page::ProbeFiles;
 
 use common::sense;
 
@@ -7,30 +7,9 @@ use Curses;
 use Vmprobe::Cache::Snapshot;
 use Vmprobe::Util;
 
-use parent 'Vmprobe::Viewer::Probe::Base';
+use parent 'Vmprobe::Viewer::Page::BaseProbe';
 
 
-
-sub history_size {
-    my ($self) = @_;
-
-    return 1;
-}
-
-
-sub process_entry {
-    my ($self, $entry) = @_;
-
-    my $output = {};
-
-    #my $files_visible = int($self->height / (1 + keys %{ $entry->{data}->{snapshots} })) - 2;
-
-    foreach my $key (keys %{ $entry->{data}->{snapshots} }) {
-        $output->{$key} = Vmprobe::Cache::Snapshot::parse_records($entry->{data}->{snapshots}->{$key}, $self->width - 35, 0);
-    }
-
-    return $output;
-}
 
 
 sub bindings {
@@ -46,6 +25,28 @@ sub bindings {
         },
     }
 }
+
+
+sub help_text {
+  q{s          - change sort order
+}
+}
+
+
+
+
+sub process_entry {
+    my ($self, $entry) = @_;
+
+    my $output = {};
+
+    foreach my $key (keys %{ $entry->{data}->{snapshots} }) {
+        $output->{$key} = Vmprobe::Cache::Snapshot::parse_records($entry->{data}->{snapshots}->{$key}, $self->width - 35, 0);
+    }
+
+    return $output;
+}
+
 
 
 

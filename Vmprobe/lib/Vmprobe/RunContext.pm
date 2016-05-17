@@ -17,7 +17,7 @@ our $var_dir;
 sub set_var_dir {
     my $new_var_dir = shift;
 
-    die "var dir already set to $var_dir" if defined $var_dir;
+    return if defined $var_dir;
 
     if (defined $new_var_dir) {
         die "var dir $new_var_dir is not a directory" if !-d $new_var_dir;

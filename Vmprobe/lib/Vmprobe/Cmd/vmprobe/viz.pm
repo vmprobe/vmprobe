@@ -23,7 +23,8 @@ doc: Curses visualization of recorded probes.
 our $viewer;
 
 sub run {
-    $viewer = Vmprobe::Viewer->new();
+    $viewer = Vmprobe::Viewer->new(init_screen => ['ProbeList', 'Probes']);
+
     AE::cv->recv;
 }
 

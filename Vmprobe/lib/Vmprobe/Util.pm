@@ -2,6 +2,8 @@ package Vmprobe::Util;
 
 use common::sense;
 
+use Carp;
+
 use Exporter 'import';
 our @EXPORT = qw(pages2size colour get_session_token abbreviate_perl_exception sereal_encode sereal_decode curr_time format_duration);
 
@@ -67,12 +69,13 @@ sub pages2size {
 
 sub format_duration {
     my $dur = shift;
+    my $show_short = shift;
 
     if ($dur < 1) {
-        #return sprintf("%.1fms", 1000.0 * $dur);
+        return sprintf("%.1fms", 1000.0 * $dur) if $show_short;
         return "<1s";
     } elsif ($dur < 60) {
-        #return sprintf("%ds", int($dur));
+        return sprintf("%ds", int($dur)) if $show_short;
         return "<1m";
     } elsif ($dur < 3600) {
         return sprintf("%dm", int($dur/60));
@@ -183,7 +186,7 @@ sub sereal_decode {
     };
 
     if ($@) {
-        die "$@ (" . substr($_[0], 0, 100) . ")";
+        croak "$@ (" . substr($_[0], 0, 100) . ")";
     }
 
     return $decoded;

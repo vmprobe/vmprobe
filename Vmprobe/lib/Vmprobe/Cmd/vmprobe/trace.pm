@@ -147,10 +147,10 @@ sub handle_probe_result {
                    ->trigger("probe-" . $summary->{probe_id});
     }
 
-if(!$viewer){
-use Data::Dumper; print "PROBE RESULT: " . Dumper($result);
-print Dumper(Vmprobe::Cache::Snapshot::parse_records($result->{data}{snapshots}{mincore}, 10, 2));
-}
+#if(!$viewer){
+#use Data::Dumper; print "PROBE RESULT: " . Dumper($result);
+#print Dumper(Vmprobe::Cache::Snapshot::parse_records($result->{data}{snapshots}{mincore}, 10, 2));
+#}
 }
 
 
