@@ -3,6 +3,7 @@ package Vmprobe::Viewer::Page::Base;
 use common::sense;
 
 use Curses;
+use Class::ISA;
 
 use Vmprobe::Util;
 use Vmprobe::RunContext;
@@ -10,6 +11,30 @@ use Vmprobe::DB::Probe;
 use Vmprobe::DB::Entry;
 
 use parent 'Curses::UI::Widget';
+
+
+
+our $bindings = [
+    {
+        key => '?',
+        desc => 'this help screen',
+        cb => sub { my $self = shift; $self->root->dialog(-message => $self->_help_text_wrapper()) },
+    },
+
+    ## Implemented by viewer
+    {
+        key => 'left/right',
+        desc => 'switch tabs',
+    },
+    {
+        key => 'x',
+        desc => 'close current tab',
+    },
+    {
+        key => 'q/control-c',
+        desc => 'quit',
+    },
+];
 
 
 
@@ -22,18 +47,9 @@ sub new {
 
     my $self = $class->SUPER::new( %args );
 
-
-    $self->set_binding(sub { $self->root->dialog(-message => $self->_help_text_wrapper()) }, "?");
-
-    my $bindings = $self->bindings();
-
-    foreach my $key (keys %{ $bindings }) {
-        $self->set_binding($bindings->{$key}, $key);
-    }
-
+    $self->_install_bindings;
 
     $self->init;
-
 
     return $self;
 }
@@ -42,23 +58,45 @@ sub new {
 sub _help_text_wrapper {
     my ($self) = @_;
 
-    my $text =
-qq{?          - this help screen
-left/right - switch tabs
-x          - close current tab
-q          - quit
-};
+    my $output = '';
 
-    my $page_specific_help_text = $self->help_text();
+    foreach my $pkg (Class::ISA::self_and_super_path(ref $self)) {
+        my $package_bindings;
 
-    $text = "$page_specific_help_text\n$text" if $page_specific_help_text;
+        {
+            no strict "refs";
+            $package_bindings = ${ "${pkg}::bindings" };
+        }
 
-    return $text;
+        foreach my $b (@$package_bindings) {
+            $output .= sprintf("%-15s - %s\n", $b->{key}, $b->{desc})
+                if defined $b->{key} && defined $b->{desc};
+        }
+
+        $output .= "\n";
+    }
+
+    return $output;
 }
 
 
-sub help_text { '' }
+sub _install_bindings {
+    my ($self) = @_;
 
+    foreach my $pkg (Class::ISA::self_and_super_path(ref $self)) {
+        my $package_bindings;
+
+        {
+            no strict "refs";
+            $package_bindings = ${ "${pkg}::bindings" };
+        }
+
+        foreach my $b (@$package_bindings) {
+            $self->set_binding($b->{cb}, $b->{key})
+                if defined $b->{key} && defined $b->{cb};
+        }
+    }
+}
 
 
 sub redraw {
@@ -81,8 +119,6 @@ sub draw {
     doupdate() unless $no_doupdate;
 }
 
-
-sub bindings { {} }
 
 sub render {
     die "must implement render";

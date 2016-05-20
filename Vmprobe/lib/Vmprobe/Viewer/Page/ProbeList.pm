@@ -30,21 +30,29 @@ sub init {
 }
 
 
-sub help_text {
-  q{up/down    - select probe
-enter      - enter probe
-}
-}
+our $bindings = [
+    {
+        key => KEY_UP(),
+        cb => \&select_prev_probe,
+    },
+    {
+        key => KEY_DOWN(),
+        cb => \&select_next_probe,
+    },
+    {
+        key => 'up/down',
+        desc => 'select probe',
+    },
 
-
-sub bindings {
-    return {
-        KEY_UP() => \&select_prev_probe,
-        KEY_DOWN() => \&select_next_probe,
-        KEY_ENTER() => \&open_probe_screen,
-    };
-}
-
+    {
+        key => KEY_ENTER(),
+        cb => \&open_probe_screen,
+    },
+    {
+        key => 'enter',
+        desc => 'open probe summary',
+    },
+];
 
 
 sub render {

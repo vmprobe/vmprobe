@@ -12,25 +12,21 @@ use parent 'Vmprobe::Viewer::Page::BaseProbe';
 
 
 
-sub bindings {
+our $bindings = [
     {
-        's' => sub {
-            my ($self) = @_;
+        key => 's',
+        desc => 'change sort order',
+        cb => sub {
+                  my ($self) = @_;
 
-            $self->{selected_type_index}++;
-            $self->{selected_type_index} = 0 if $self->{selected_type_index} >= @{ $self->{snapshot_types} };
+                  $self->{selected_type_index}++;
+                  $self->{selected_type_index} = 0 if $self->{selected_type_index} >= @{ $self->{snapshot_types} };
 
-            $self->schedule_draw(1);
-            $self->draw(0) if !$self->hidden && $self->in_topwindow;
-        },
-    }
-}
-
-
-sub help_text {
-  q{s          - change sort order
-}
-}
+                  $self->schedule_draw(1);
+                  $self->draw(0) if !$self->hidden && $self->in_topwindow;
+              },
+    },
+];
 
 
 
@@ -44,7 +40,7 @@ sub process_entry {
         $output->{$key} = Vmprobe::Cache::Snapshot::parse_records($entry->{data}->{snapshots}->{$key}, $self->width - 35, 0);
     }
 
-    return $output;
+    $self->{latest} = $output;
 }
 
 
@@ -53,7 +49,7 @@ sub process_entry {
 sub render {
     my ($self, $canvas) = @_;
 
-    my @snapshot_types = sort keys %{ $self->{entries}->[0] };
+    my @snapshot_types = sort keys %{ $self->{latest} };
     $self->{snapshot_types} = \@snapshot_types;
 
     my $sort_field = $snapshot_types[$self->{selected_type_index}];
@@ -62,7 +58,7 @@ sub render {
     my $by_file = {};
 
     foreach my $type (@snapshot_types) {
-        foreach my $record (@{ $self->{entries}->[0]->{$type} }) {
+        foreach my $record (@{ $self->{latest}->{$type} }) {
             $by_file->{$record->{filename}}->{$type} = $record;
         }
     }
@@ -83,7 +79,7 @@ sub render {
     $curr_line += 2;
 
 
-    foreach my $record (@{ $self->{entries}->[0]->{ $sort_field } }) {
+    foreach my $record (@{ $self->{latest}->{ $sort_field } }) {
         $canvas->addstring($curr_line++, 0, "$record->{filename}  " . pages2size($record->{num_pages}));
 
         foreach my $type (@snapshot_types) {

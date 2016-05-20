@@ -27,25 +27,61 @@ sub init {
         $self->redraw();
     });
 
-    $self->backfill_entries($self->history_size());
+    $self->{window_size} = $self->initial_window_size();
+    $self->{skip} = $self->initial_skip();
+
+    $self->backfill_entries();
 
     return $self;
 }
 
 
 
-sub history_size { 1 }
+## Over-ride
+
+sub initial_window_size { 1 }
+sub initial_skip { 0 }
+
+
+sub reset_entries {
+    my ($self) = @_;
+
+    delete $self->{latest};
+}
+
 
 sub process_entry {
     my ($self, $entry, $entry_id) = @_;
 
-    return { %$entry, entry_id => $entry_id };
+    $self->{latest} = { %$entry, entry_id => $entry_id };
 }
 
 
 
+
+## Control methods
+
+sub change_window_skip {
+    my ($self, $new_window_size, $new_skip) = @_;
+
+    $self->reset_entries();
+    delete $self->{last_seen_entry_id};
+
+    $self->{window_size} = $new_window_size;
+    $self->{skip} = $new_skip;
+
+    $self->backfill_entries();
+}
+
+
+
+
+
+## Internal
+
+
 sub backfill_entries {
-    my ($self, $history_size) = @_;
+    my ($self) = @_;
 
     my $txn = new_lmdb_txn();
 
@@ -58,9 +94,10 @@ sub backfill_entries {
             cb => sub {
                 my ($k, $v) = @_;
 
-                push @entry_ids, $v;
+                next if @entry_ids && $entry_ids[-1] - $v < $self->{skip};
 
-                last ITER if @entry_ids > $history_size;
+                push @entry_ids, $v;
+                last ITER if @entry_ids >= $self->{window_size};
             },
         });
     }
@@ -69,8 +106,7 @@ sub backfill_entries {
 
     foreach my $entry_id (reverse @entry_ids) {
         my $entry = $entry_db->get($entry_id);
-
-        $self->process_entry_wrapper($entry_id, $entry);
+        $self->process_entry_wrapper($entry, $entry_id);
     }
 
     $txn->commit;
@@ -86,13 +122,14 @@ sub find_new_entries {
 
     Vmprobe::DB::EntryByProbe->new($txn)->iterate_dups({
         key => $self->{probe_id},
-        offset => $self->{last_seen_entry},
+        offset => $self->{last_seen_entry_id},
         cb => sub {
             my ($k, $v) = @_;
 
-            my $entry = $entry_db->get($v);
+            next if exists $self->{last_seen_entry_id} && $v - $self->{last_seen_entry_id} < $self->{skip};
 
-            $self->process_entry_wrapper($v, $entry);
+            my $entry = $entry_db->get($v);
+            $self->process_entry_wrapper($entry, $v);
         },
     });
 
@@ -101,13 +138,12 @@ sub find_new_entries {
 
 
 sub process_entry_wrapper {
-    my ($self, $entry_id, $entry) = @_;
+    my ($self, $entry, $entry_id) = @_;
 
-    $self->{last_seen_entry} = $entry_id;
-    unshift @{ $self->{entries} }, $self->process_entry($entry, $entry_id);
-
-    pop @{ $self->{entries} } if @{ $self->{entries} } > $self->history_size();
+    $self->{last_seen_entry_id} = $entry_id;
+    $self->process_entry($entry, $entry_id);
 }
+
 
 
 

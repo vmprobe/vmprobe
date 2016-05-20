@@ -11,23 +11,32 @@ use parent 'Vmprobe::Viewer::Page::BaseProbe';
 
 
 
-sub bindings {
+our $bindings = [
     {
-        'f' => sub {
-            my ($self) = @_;
-
-            $self->{viewer}->new_screen("ProbeFiles", { probe_id => $self->{probe_id} });
-        },
+        key => 'f',
+        desc => 'most recent perl-file break-down',
+        cb => sub {
+                  my ($self) = @_;
+                  $self->{viewer}->new_screen("ProbeFiles", { probe_id => $self->{probe_id} });
+              },
+    },
+    {
+        key => 'e',
+        desc => 'probe entries',
+        cb => sub {
+                  my ($self) = @_;
+                  $self->{viewer}->new_screen("ProbeEntries", { probe_id => $self->{probe_id} });
+              },
+    },
+    {
+        key => 'd',
+        desc => 'deltas',
+        cb => sub {
+                  my ($self) = @_;
+                  $self->{viewer}->new_screen("ProbeDelta", { probe_id => $self->{probe_id} });
+              },
     }
-}
-
-
-
-sub help_text {
-  q{f          - most recent per-file break-down
-}
-}
-
+];
 
 
 
@@ -37,7 +46,7 @@ sub render {
     my $curr_line = 0;
 
     $canvas->attron(Curses::COLOR_PAIR($Curses::UI::color_object->get_color_pair('green', 'black')));
-    $canvas->addstring($curr_line, 0, "(f) files (h) histogram (d) delta summary (D) delta in-depth");
+    $canvas->addstring($curr_line, 0, "(f) files (e) entries (d) delta summary (D) delta in-depth");
     $canvas->attroff(Curses::A_COLOR);
 
     $curr_line += 2;
@@ -55,8 +64,8 @@ sub render {
 
     $curr_line++;
 
-    if (@{ $self->{entries} }) {
-        my $entry = $self->{entries}->[0];
+    if ($self->{latest}) {
+        my $entry = $self->{latest};
 
         my $last_update = $curr_time_secs - ($entry->{start} / 1e6);
 
