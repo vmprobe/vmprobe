@@ -21,7 +21,6 @@ my %module_build_args = (
   configure_requires => {
     'Module::Build' => '0.4214',
     'CPAN::Meta::Converter' => '2.150005',
-    'Alien::LMDB' => 0,
   },
   requires => {
     'common::sense' => 0,
@@ -40,7 +39,7 @@ my %module_build_args = (
     'Sereal::Decoder' => 0,
     'Sereal::Encoder' => 0,
     'Digest::SHA3' => 0,
-    'LMDB_File' => 0,
+    'Task::LMDB' => 0,
     'Linux::Inotify2' => 0,
     'Class::ISA' => 0,
 
