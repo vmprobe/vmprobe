@@ -7,10 +7,7 @@ use Curses;
 use Vmprobe::Cache::Snapshot;
 use Vmprobe::Util;
 
-use parent 'Vmprobe::Viewer::Page::BaseProbe';
-
-
-
+use parent 'Vmprobe::Viewer::Page::BaseProbeHistory';
 
 
 
@@ -50,11 +47,20 @@ sub process_entry {
 }
 
 
+sub reset_entries {
+    my ($self) = @_;
+
+    delete $self->{prev_entry};
+    delete $self->{entries};
+}
+
+
 
 sub render {
     my ($self, $canvas) = @_;
 
-    my $curr_line = 0;
+    $self->render_window_skip_line;
+    my $curr_line = 1;
 
     foreach my $entry (@{ $self->{entries} }) {
         $canvas->addstring($curr_line++, 0, scalar(localtime($entry->{entry_id} / 1e6)));

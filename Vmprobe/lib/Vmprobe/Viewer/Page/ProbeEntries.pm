@@ -7,18 +7,9 @@ use Curses;
 use Vmprobe::Cache::Snapshot;
 use Vmprobe::Util;
 
-use parent 'Vmprobe::Viewer::Page::BaseProbe';
+use parent 'Vmprobe::Viewer::Page::BaseProbeHistory';
 
 
-
-
-
-
-sub initial_window_size {
-    my ($self) = @_;
-
-    return $self->height;
-}
 
 
 sub process_entry {
@@ -27,15 +18,22 @@ sub process_entry {
     unshift @{ $self->{entries} }, { entry_id => $entry_id, %$entry };
 }
 
+sub reset_entries {
+    my ($self) = @_;
+
+    delete $self->{entries};
+}
+
 
 
 sub render {
     my ($self, $canvas) = @_;
 
-    my $curr_line = 0;
+    $self->render_window_skip_line;
+    my $curr_line = 1;
 
     foreach my $entry (@{ $self->{entries} }) {
-        $canvas->addstring($curr_line++, 0, scalar(localtime($entry->{entry_id} / 1e6)));
+        $canvas->addstring($curr_line++, 0, "$entry->{entry_id} : " . scalar(localtime($entry->{entry_id} / 1e6)));
     }
 }
 
