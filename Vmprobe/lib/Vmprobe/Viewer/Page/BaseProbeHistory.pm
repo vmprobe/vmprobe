@@ -37,7 +37,7 @@ our $bindings = [
 
             $new_skip /= 2;
             $new_skip = 0 if $new_skip <= ($self->{summary}->{params}->{refresh} // 5);
-            $new_skip = 0 if $new_skip <= 1;
+            $new_skip = 0 if $new_skip <= 1e6;
 
             $self->change_window_skip($self->{window_size}, $new_skip);
             $self->redraw;
