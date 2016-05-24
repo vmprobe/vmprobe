@@ -90,14 +90,21 @@ sub build_par {
         -l ../libvmprobe/libvmprobe.so
         -l $liblmdb_path
 
+        -M Vmprobe::
+        -M Vmprobe::Viewer::
         -M Vmprobe::Cmd::
         -M Vmprobe::Raw::
-        -M Vmprobe::Daemon::
-        -M Net::OpenSSH::
 
         ## Core modules not picked up by ScanDeps for some reason
         -M PerlIO -M attributes -M Tie::Hash::NamedCapture
 
+        ## Unicode support
+        -u -M _charnames
+
+        ## 3rd party modules
+
+        -M Net::OpenSSH::
+        -M Curses::UI::
         -X TK::
 
         -B -p -o vmprobe.par

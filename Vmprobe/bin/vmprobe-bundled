@@ -5,8 +5,9 @@ use strict;
 
 ## Run from the system-wide installation (production mode)
 
-@INC = ('/usr/lib/vmprobe/lib');
-
+my $lib_dir = '/usr/lib/vmprobe/lib';
+@INC = ($lib_dir);
+chdir($lib_dir);
 
 
 require Vmprobe::Cmd;
