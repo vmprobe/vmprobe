@@ -13,11 +13,14 @@ use Vmprobe::DB::Global;
 
 
 our $var_dir;
+our $cleanup_on_exit;
 
 sub set_var_dir {
-    my $new_var_dir = shift;
+    my ($new_var_dir, $do_mkdir, $do_cleanup) = @_;
 
-    return if defined $var_dir;
+    die "var dir already set" if defined $var_dir;
+
+    $cleanup_on_exit = $do_cleanup;
 
     if (defined $new_var_dir) {
         die "var dir $new_var_dir is not a directory" if !-d $new_var_dir;
@@ -29,16 +32,17 @@ sub set_var_dir {
         $var_dir = "$home_dir/.vmprobe";
 
         if (!-d $var_dir) {
-            mkdir($var_dir) || die "unable to create var dir $var_dir ($!)";
+            if ($do_mkdir) {
+                mkdir($var_dir) || die "unable to create var dir $var_dir ($!)";
+            } else {
+                die "var directory $var_dir doesn't exist, create with 'vmprobe db init'";
+            }
         }
     }
+
+    switchboard(); ## ensure switchboard directory is created
 }
 
-sub var_dir {
-    die "var_dir has not yet been set" if !defined $var_dir;
-
-    return $var_dir;
-}
 
 
 
@@ -52,7 +56,6 @@ sub _init_db {
     my $db_dir = "$var_dir/db";
 
     if (!-e $db_dir) {
-        say "Creating db directory: $db_dir";
         mkdir($db_dir) || die "couldn't mkdir($db_dir): $!";
     }
 
@@ -96,7 +99,7 @@ sub switchboard () {
     my $switchboard_dir = $global_db->get('switchboard_dir');
     if (!defined $switchboard_dir || !-d $switchboard_dir) {
         require File::Temp;
-        $switchboard_dir = File::Temp::tempdir(CLEANUP => 0);
+        $switchboard_dir = File::Temp::tempdir(CLEANUP => $cleanup_on_exit);
 
         $global_db->insert('switchboard_dir', $switchboard_dir);
     }

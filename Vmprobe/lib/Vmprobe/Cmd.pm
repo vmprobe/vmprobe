@@ -95,11 +95,13 @@ sub run_cmd_aux {
 
     push @getopt_specs, 'help|?';
 
-    push @getopt_specs, '<>';
-    $o->{'<>'} = sub {
-        $next_cmd = $_[0];
-        die "!FINISH";
-    };
+    if (!exists $yaml_spec->{argv}) {
+        push @getopt_specs, '<>';
+        $o->{'<>'} = sub {
+            $next_cmd = $_[0];
+            die "!FINISH";
+        };
+    }
 
 
     {

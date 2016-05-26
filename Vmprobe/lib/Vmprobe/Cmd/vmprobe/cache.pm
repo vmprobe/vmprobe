@@ -1,10 +1,11 @@
-package Vmprobe::Cmd::vmprobe::trace;
+package Vmprobe::Cmd::vmprobe::cache;
 
 use common::sense;
 
 use EV;
 use AnyEvent;
 use AnyEvent::Util;
+use File::Temp;
 
 use Vmprobe::Cmd;
 use Vmprobe::Util;
@@ -23,53 +24,55 @@ use Vmprobe::DB::ProbeUpdateTimes;
 
 our $spec = q{
 
-doc: Capture a trace.
+doc: Collect information about the filesystem cache.
+
+argv: Sub-command: dump, show, save
 
 opt:
-  probe:
+  refresh:
     type: Str
-    alias: p
-    doc: Probe definition, key=value pairs separated by white-space.
-  single:
-    type: Bool
-    alias: 1
-    doc: Only acquire a single initial snapshot of each probe.
-  tag:
-    type: Str[]
-    alias: t
-    doc: Tags to associate with this trace.
-  verbose:
-    type: Bool
+    alias: r
+    doc: Refresh interval in seconds. If omitted, just gather a single snapshot.
+  flags:
+    type: Str
+    alias: f
+    doc: Comma-separated list of page flags to acquire (ie "mincore,active,referenced").
+  var-dir:
+    type: Str
     alias: v
-    doc: Print additional info to stderr while capturing trace.
-  quiet:
-    type: Bool
-    alias: q
-    doc: Don't print any informational messages to stderr.
-  curses:
-    type: Bool
-    alias: c
-    doc: Show interactive curses display in terminal.
-
-argv: Command to run. Otherwise capture trace until process is killed.
+    doc: Directory for the vmprobe DB and other run-time files.
 
 };
 
 
 
-sub validate {
-    die "need to specify a probe (-p)" if !defined opt->{probe};
-}
-
-
-our $viewer;
 our $summary;
 our $last_update_time;
 
-sub run {
-    my $remote_cache = Vmprobe::RemoteCache->new;
 
-    my $probe_params = Vmprobe::Util::parse_key_value(opt->{probe});
+sub run {
+    my $cmd = argv->[0] // die "need sub-command";
+    my $path = argv->[1] // die "need path";
+
+    if ($cmd eq 'save') {
+        Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 0, 0);
+    } elsif ($cmd eq 'dump' || $cmd eq 'show') {
+        my $var_dir = File::Temp::tempdir(CLEANUP => 1);
+        Vmprobe::RunContext::set_var_dir($var_dir, 0, 1);
+    } else {
+        die "unrecognized sub-command: $cmd";
+    }
+
+
+    my $probe_params = {
+        type => 'cache',
+        path => $path,
+    };
+
+    $probe_params->{flags} = opt->{flags} if defined opt->{flags};
+    $probe_params->{refresh} = opt->{refresh} if defined opt->{refresh};
+
+    my $remote_cache = Vmprobe::RemoteCache->new;
 
     my $probe = Vmprobe::Probe->new(
                  remote_cache => $remote_cache,
@@ -79,8 +82,6 @@ sub run {
     $summary = $probe->summary();
 
     {
-        diagnostic("Saving new probe $summary->{probe_id} to DB");
-
         my $txn = new_lmdb_txn();
         Vmprobe::DB::Probe->new($txn)->insert($summary->{probe_id}, $summary);
         $txn->commit;
@@ -88,38 +89,17 @@ sub run {
 
     switchboard->trigger('new-probe');
 
-if(!$viewer){
-use Data::Dumper;
-print Dumper($summary);
-}
-    #$viewer = Vmprobe::Viewer->new(probe_summaries => [ $summary ]) if opt->{curses};
-
-    diagnostic("Taking initial snapshot...");
-
     $probe->once_blocking(\&handle_probe_result);
 
-    if (opt->{single}) {
-        diagnostic("Done.");
-        return;
+    if (defined $probe_params->{refresh}) {
+        $probe->start_poll(\&handle_probe_result);
     }
 
-    $probe->start_poll(\&handle_probe_result);
+    if ($cmd eq 'show') {
+        my $viewer = Vmprobe::Viewer->new(init_screen => ['ProbeSummary', { probe_id => $summary->{probe_id}, }]);
 
-    if (!@{ argv() }) {
-        diagnostic("Tracing... Stop with control-c");
         AE::cv->recv;
     }
-
-    diagnostic("Tracing command...");
-
-    my $exit_code = AnyEvent::Util::run_cmd(argv)->recv;
-
-    diagnostic("Taking final snapshot...");
-
-    $probe->stop_poll();
-    $probe->once_blocking(\&handle_probe_result);
-
-    exit $exit_code;
 }
 
 
@@ -153,16 +133,6 @@ sub handle_probe_result {
 #}
 }
 
-
-
-
-sub diagnostic {
-    my $msg = shift;
-
-    if (!opt->{quiet} && !$viewer) {
-        say STDERR $msg;
-    }
-}
 
 
 1;
