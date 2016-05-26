@@ -72,10 +72,10 @@ sub ACTION_bundle {
     sys("chmod -R u+w _bundle");
 
 
-
-    sys("mv _bundle/shlib/*/*.so _bundle/");
+    sys("mv _bundle/shlib/*/*.so* _bundle/");
     sys("rm -rf _bundle/shlib/ _bundle/MANIFEST _bundle/META.yml _bundle/script");
-    sys("chmod a-x _bundle/*.so");
+    sys("chmod a-x _bundle/*.so*");
+    sys("strip _bundle/libvmprobe.so");
 }
 
 
@@ -84,11 +84,17 @@ sub build_par {
 
     my $liblmdb_path = Alien::LMDB->new->dist_dir() . "/lib/liblmdb.so";
 
+    #$ENV{'LD_LIBRARY_PATH'} = '/lib/x86_64-linux-gnu';
+
     pp_wrapper(qq{
         bin/vmprobe
 
         -l ../libvmprobe/libvmprobe.so
         -l $liblmdb_path
+
+        ## FIXME: find a way to not hard-code paths/versions
+        -l /lib/x86_64-linux-gnu/libncursesw.so.5
+        -l /lib/x86_64-linux-gnu/libtinfo.so.5
 
         -M Vmprobe::
         -M Vmprobe::Viewer::
@@ -99,7 +105,7 @@ sub build_par {
         -M PerlIO -M attributes -M Tie::Hash::NamedCapture
 
         ## Unicode support
-        -u -M _charnames
+        -u -M _charnames -M utf8
 
         ## 3rd party modules
 

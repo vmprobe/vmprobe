@@ -2,6 +2,22 @@ package Vmprobe::Viewer;
 
 use common::sense;
 
+BEGIN {
+    ## Make sure to use our bundled curses libraries if they are present
+
+    my ($self) = @_;
+
+    my $curses_path = '/usr/lib/vmprobe/libncursesw.so.5';
+    my $tinfo_path = '/usr/lib/vmprobe/libtinfo.so.5';
+
+    if (-e $curses_path && -e $tinfo_path) {
+        require DynaLoader;
+
+        DynaLoader::dl_load_file($curses_path, 0x01);
+        DynaLoader::dl_load_file($tinfo_path, 0x01);
+    }
+}
+
 use Curses;
 use Curses::UI::AnyEvent;
 
@@ -21,10 +37,7 @@ sub new {
     bless $self, $class;
 
 
-
     $self->{cui} = Curses::UI::AnyEvent->new(-color_support => 1, -mouse_support => 0, -utf8 => 1);
-$self->{cui}->leave_curses(1);
-say;
 
     $self->{cui}->set_binding(sub { exit }, "\cC");
     $self->{cui}->set_binding(sub { exit }, "q");
