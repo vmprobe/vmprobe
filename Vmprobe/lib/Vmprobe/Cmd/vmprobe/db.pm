@@ -6,7 +6,7 @@ use EV;
 
 use Vmprobe::Cmd;
 use Vmprobe::RunContext;
-use Vmprobe::Viewer;
+use Vmprobe::Expression;
 
 
 our $spec = q{
@@ -28,13 +28,13 @@ opt:
 
 sub run {
     my $cmd = argv->[0] // die "need sub-command";
-    my $expr;
+    my $expression_string;
 
     if ($cmd eq 'init') {
         Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 0, 1);
         say "vmprobe db initialized: $Vmprobe::RunContext::var_dir";
     } elsif ($cmd eq 'dump' || $cmd eq 'show') {
-        $expr = argv->[1];
+        $expression_string = argv->[1];
 
         Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 0, 0);
     } else {
@@ -45,11 +45,18 @@ sub run {
     if ($cmd eq 'show') {
         my $viewer;
 
-        if (!defined $expr) {
+        if (!defined $expression_string) {
+            require Vmprobe::Viewer;
             $viewer = Vmprobe::Viewer->new(init_screen => ['ProbeList']);
         }
 
         AE::cv->recv;
+    } elsif ($cmd eq 'dump') {
+        my $expr = Vmprobe::Expression->new($expression_string);
+
+        my $result = $expr->eval();
+
+        use Data::Dumper; print Dumper($result);
     }
 }
 

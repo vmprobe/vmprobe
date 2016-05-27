@@ -42,6 +42,7 @@ my %module_build_args = (
     'Task::LMDB' => 0,
     'Linux::Inotify2' => 0,
     'Class::ISA' => 0,
+    'Regexp::Grammars' => 0,
 
     ## Not needed anymore?
     'Plack' => 0,
