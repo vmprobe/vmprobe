@@ -5,6 +5,8 @@ use common::sense;
 require XSLoader;
 XSLoader::load;
 
+use Vmprobe::Util;
+
 
 
 ## https://www.kernel.org/doc/Documentation/vm/pagemap.txt
@@ -75,6 +77,37 @@ sub take {
     return $output;
 }
 
+
+
+
+sub render_resident_amount {
+    my ($resident, $pages) = @_;
+
+    return pages2size($resident) . "/" . pages2size($pages) . sprintf(" (%.1f%%)", 100.0 * $resident / ($pages || 1));
+}
+
+
+
+sub render_parse_records {
+    my ($snapshot_ref, $num_buckets, $limit, $min_pages) = @_;
+
+    $num_buckets //= 25;
+    $limit //= 0;
+
+    my $parsed = Vmprobe::Cache::Snapshot::parse_records($$snapshot_ref, $num_buckets, $limit);
+
+    my $output = '';
+
+    foreach my $rec (@$parsed) {
+        next if defined $min_pages && $rec->{num_resident_pages} < $min_pages;
+
+        my $amount = render_resident_amount($rec->{num_resident_pages}, $rec->{num_pages});
+
+        $output .= sprintf("%-18s %-${num_buckets}s  %s\n", $amount, Vmprobe::Util::buckets_to_rendered($rec), ($rec->{filename} || 'ø'));
+    }
+
+    return $output;
+}
 
 
 

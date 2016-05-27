@@ -217,4 +217,47 @@ sub parse_key_value {
 }
 
 
+
+## Returns number of pages required to hold this size
+
+sub parse_size {
+    my $spec = shift;
+
+    $spec =~ m{^([\d.]+)([a-zA-Z]?)$} || die "invalid size spec: '$spec' (should be like '4k' or '1.2G')";
+
+    my ($num, $unit) = ($1, $2);
+    $unit = lc($unit) if defined $unit;
+
+    my $bytes;
+
+    if (!$unit) {
+        $bytes = $num;
+    } elsif ($unit eq 'k') {
+        $bytes = $num * 1024;
+    } elsif ($unit eq 'm') {
+        $bytes = $num * 1024 * 1024;
+    } elsif ($unit eq 'g') {
+        $bytes = $num * 1024 * 1024 * 1024;
+    } elsif ($unit eq 't') {
+        $bytes = $num * 1024 * 1024 * 1024 * 1024;
+    }
+
+    return int(($bytes + 4095) / 4096);
+}
+
+
+
+sub buckets_to_rendered {
+    my ($parsed) = @_;
+
+    return join('',
+                map {
+                    $_ == 0 ? ' ' :
+                    $_ == $parsed->{pages_per_bucket} ? "\x{2588}" :
+                    chr(0x2581 + int(8 * $_ / $parsed->{pages_per_bucket}))
+                }
+                @{ $parsed->{buckets} });
+}
+
+
 1;

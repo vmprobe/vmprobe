@@ -4,6 +4,7 @@ use common::sense;
 
 use EV;
 
+use Vmprobe::Util;
 use Vmprobe::Cmd;
 use Vmprobe::RunContext;
 use Vmprobe::Expression;
@@ -13,7 +14,7 @@ our $spec = q{
 
 doc: Inspect and modify information in the vmprobe database.
 
-argv: Sub-command: init, dump, show
+argv: Sub-command: init, show, viz
 
 opt:
   var-dir:
@@ -42,7 +43,7 @@ sub run {
     }
 
 
-    if ($cmd eq 'show') {
+    if ($cmd eq 'viz') {
         my $viewer;
 
         if (!defined $expression_string) {
@@ -51,12 +52,13 @@ sub run {
         }
 
         AE::cv->recv;
-    } elsif ($cmd eq 'dump') {
+    } elsif ($cmd eq 'show') {
         my $expr = Vmprobe::Expression->new($expression_string);
 
         my $result = $expr->eval();
 
-        use Data::Dumper; print Dumper($result);
+        binmode(STDOUT, ":utf8");
+        print Vmprobe::Cache::Snapshot::render_parse_records($result);
     }
 }
 

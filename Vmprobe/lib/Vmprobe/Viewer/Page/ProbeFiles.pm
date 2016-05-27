@@ -90,7 +90,7 @@ sub render {
 
             if (defined $subrecord) {
                 $resident = $subrecord->{num_resident_pages};
-                $rendered = buckets_to_rendered($subrecord);
+                $rendered = Vmprobe::Util::buckets_to_rendered($subrecord);
             }
 
             $canvas->addstring($curr_line++, 0, sprintf("  %-13s | %-10s | %s", $type, pages2size($resident), $rendered));
@@ -100,19 +100,6 @@ sub render {
     }
 }
 
-
-
-sub buckets_to_rendered {
-    my ($parsed) = @_;
-
-    return join('',
-                map {
-                    $_ == 0 ? ' ' :
-                    $_ == $parsed->{pages_per_bucket} ? "\x{2588}" :
-                    chr(0x2581 + int(8 * $_ / $parsed->{pages_per_bucket}))
-                }
-                @{ $parsed->{buckets} });
-}
 
 
 1;
