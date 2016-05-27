@@ -174,11 +174,6 @@ sub _trigger_change_cb {
             return $self->{result_ref};
         }
     }
-
-
-    sub eval_entry {
-        my ($self, $container, $entry_id) = @_;
-    }
 }
 
 

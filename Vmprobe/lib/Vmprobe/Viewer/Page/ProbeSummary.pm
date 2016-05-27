@@ -46,7 +46,7 @@ sub render {
     my $curr_line = 0;
 
     $canvas->attron(Curses::COLOR_PAIR($Curses::UI::color_object->get_color_pair('green', 'black')));
-    $canvas->addstring($curr_line, 0, "(f) files (e) entries (d) delta summary (D) delta in-depth");
+    $canvas->addstring($curr_line, 0, "(f) files (e) entries (d) deltas");
     $canvas->attroff(Curses::A_COLOR);
 
     $curr_line += 2;

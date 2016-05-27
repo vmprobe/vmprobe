@@ -34,7 +34,7 @@ sub run {
     if ($cmd eq 'init') {
         Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 0, 1);
         say "vmprobe db initialized: $Vmprobe::RunContext::var_dir";
-    } elsif ($cmd eq 'dump' || $cmd eq 'show') {
+    } elsif ($cmd eq 'show' || $cmd eq 'viz') {
         $expression_string = argv->[1];
 
         Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 0, 0);
@@ -44,10 +44,11 @@ sub run {
 
 
     if ($cmd eq 'viz') {
+        require Vmprobe::Viewer;
+
         my $viewer;
 
         if (!defined $expression_string) {
-            require Vmprobe::Viewer;
             $viewer = Vmprobe::Viewer->new(init_screen => ['ProbeList']);
         }
 

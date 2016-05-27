@@ -134,6 +134,12 @@ sub run {
         my $viewer = Vmprobe::Viewer->new(init_screen => ['ProbeSummary', { probe_id => $summary->{probe_id}, }]);
 
         AE::cv->recv;
+    } elsif ($cmd eq 'save') {
+        if (exists $probe_params->{refresh}) {
+            say "Probe id: $summary->{probe_id}  (refreshing every $probe_params->{refresh} seconds)";
+
+            AE::cv->recv;
+        }
     }
 }
 
