@@ -136,6 +136,10 @@ sub _trigger_change_cb {
 
         for (my $i=1; $i < @{ $self->{Method} }; $i++) {
             my $method = $self->{Method}->[$i];
+
+            die "unrecognized method '$method->{Name}'"
+                if !grep { $_ eq $method->{Name} } qw{ flag };
+
             $self->{opt}->{$method->{Name}} = $method->{Argument};
         }
 
@@ -159,7 +163,9 @@ sub _trigger_change_cb {
 
             my $entry = $container->{entry_db}->get($self->{identifier});
 
-            if (keys %{ $entry->{data}->{snapshots} } == 1) {
+            die "unable to find entry '$self->{identifier}'" if !defined $entry;
+
+            if (keys %{ $entry->{data}->{snapshots} } == 1 && !exists $self->{opt}->{flag}) {
                 $self->{result_ref} = \values %{ $entry->{data}->{snapshots} };
             } else {
                 die "entry has multiple flags recorded (" . join(',', keys %{ $entry->{data}->{snapshots} }) . "), please specify a flag in expression"
@@ -167,11 +173,13 @@ sub _trigger_change_cb {
 
                 $self->{result_ref} = \$entry->{data}->{snapshots}->{$self->{opt}->{flag}};
 
-                die "entry does not contain the flag $self->{opt}->{flag}"
+                die "entry does not contain the flag '$self->{opt}->{flag}'"
                     if !defined ${ $self->{result_ref} };
             }
 
             return $self->{result_ref};
+        } else {
+            die "probe expressions not yet supported";
         }
     }
 }
