@@ -7,7 +7,6 @@ use EV;
 use Vmprobe::Util;
 use Vmprobe::Cmd;
 use Vmprobe::RunContext;
-use Vmprobe::Expression;
 use Vmprobe::Viewer;
 
 

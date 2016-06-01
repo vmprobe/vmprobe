@@ -16,7 +16,15 @@
 namespace vmprobe { namespace cache {
 
 file::file(std::string &filename) {
-    fd = open(filename.c_str(), O_RDONLY|O_NOATIME, 0);
+    #ifdef O_NOATIME
+    if (fd == -1) {
+        fd = open(filename.c_str(), O_RDONLY|O_NOATIME, 0);
+    }
+    #endif
+
+    if (fd == -1) {
+        fd = open(filename.c_str(), O_RDONLY, 0);
+    }
 
     if (fd == -1) {
         // FIXME: increment_nofile_rlimit

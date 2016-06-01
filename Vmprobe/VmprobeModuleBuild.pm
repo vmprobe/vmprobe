@@ -76,6 +76,8 @@ sub ACTION_bundle {
     sys("rm -rf _bundle/shlib/ _bundle/MANIFEST _bundle/META.yml _bundle/script");
     sys("chmod a-x _bundle/*.so*");
     sys("strip _bundle/libvmprobe.so");
+
+    sys("rm -rf _bundle/lib/Tk/ _bundle/lib/Tk.pm _bundle/lib/auto/Tk/");
 }
 
 
@@ -105,7 +107,7 @@ sub build_par {
         -M PerlIO -M attributes -M Tie::Hash::NamedCapture
 
         ## Unicode support
-        -u -M _charnames -M utf8
+        ## -u -M _charnames -M utf8
 
         ## 3rd party modules
 

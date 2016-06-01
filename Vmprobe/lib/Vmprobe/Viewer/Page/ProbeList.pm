@@ -68,7 +68,7 @@ sub render {
         my $summary = $self->{summaries}->{$probe_id};
 
         if ($self->{selected_probe} == $probe_index) {
-            $canvas->addstr($curr_line, 0, "\N{RIGHTWARDS ARROW}");
+            $canvas->addstr($curr_line, 0, "\x{2192}"); ## \N{RIGHTWARDS ARROW}
             $canvas->attron(Curses::COLOR_PAIR($Curses::UI::color_object->get_color_pair('white', 'blue')));
             $canvas->addstr($curr_line, 2, $probe_id);
             $canvas->attroff(Curses::A_COLOR);

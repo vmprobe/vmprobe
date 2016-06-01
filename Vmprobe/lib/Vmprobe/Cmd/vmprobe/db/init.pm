@@ -5,7 +5,6 @@ use common::sense;
 use Vmprobe::Util;
 use Vmprobe::Cmd;
 use Vmprobe::RunContext;
-use Vmprobe::Expression;
 
 
 our $spec = q{
