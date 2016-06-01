@@ -21,6 +21,10 @@ opt:
     type: Str
     alias: v
     doc: Directory for the vmprobe DB and other run-time files.
+  raw:
+    type: Bool
+    alias: r
+    doc: Print a binary snapshot to standard output.
 
 };
 
@@ -36,8 +40,13 @@ sub run {
 
     my $result = $expr->eval();
 
-    binmode(STDOUT, ":utf8");
-    print Vmprobe::Cache::Snapshot::render_parse_records($result);
+    if (opt->{raw}) {
+        binmode(STDOUT, ":raw");
+        print $$result;
+    } else {
+        binmode(STDOUT, ":utf8");
+        print Vmprobe::Cache::Snapshot::render_parse_records($result);
+    }
 }
 
 

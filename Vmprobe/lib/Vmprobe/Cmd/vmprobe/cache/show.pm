@@ -12,10 +12,10 @@ use Vmprobe::Util;
 use Vmprobe::RunContext;
 use Vmprobe::Probe;
 use Vmprobe::RemoteCache;
-use Vmprobe::Viewer;
 use Vmprobe::Cache::Snapshot;
 
 use Vmprobe::DB::Probe;
+use Vmprobe::DB::Entry;
 use Vmprobe::DB::EntryByProbe;
 use Vmprobe::DB::ProbeUpdateTimes;
 
@@ -56,9 +56,9 @@ opt:
     type: Bool
     alias: s
     doc: Save probe results to vmprobe database.
-  viz:
+  raw:
     type: Bool
-    doc: Show curses visualization of probe.
+    doc: Print a raw snapshot to standard output.
   quiet:
     type: Bool
     alias: q
@@ -114,19 +114,27 @@ sub run {
 
 
 
-    if (opt->{viz}) {
-        $viewer = Vmprobe::Viewer->new(init_screen => ['ProbeSummary', { probe_id => $summary->{probe_id}, }]);
-    } else {
-        binmode(STDOUT, ":utf8");
-    }
-
     if (opt->{save}) {
         say "Probe id: $summary->{probe_id}"
-            unless opt->{quiet};
+            unless opt->{quiet} || opt->{raw};
     }
 
 
     $probe->once_blocking(\&handle_probe_result);
+
+
+    if (exists opt->{raw}) {
+        binmode(STDOUT, ":raw");
+
+        die "when exporting with --raw, can only specify one flag" if keys %{ $last_entry->{data}->{snapshots} } != 1;
+
+        print values %{ $last_entry->{data}->{snapshots} };
+
+        exit;
+    } else {
+        binmode(STDOUT, ":utf8");
+    }
+
 
     if (defined $probe_params->{refresh}) {
         $probe->start_poll(\&handle_probe_result);
@@ -182,7 +190,7 @@ sub handle_probe_result {
     switchboard->trigger("new-entry")
                ->trigger("probe-" . $summary->{probe_id});
 
-    if (!opt->{quiet} && !opt->{viz}) {
+    if (!opt->{quiet} && !opt->{raw}) {
         if (opt->{save}) {
             say "  Entry: $last_entry_id";
         } else {

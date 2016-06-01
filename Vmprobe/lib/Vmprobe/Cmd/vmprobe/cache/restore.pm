@@ -27,12 +27,23 @@ opt:
 
 sub run {
     my $path = argv->[0] // die "need path";
-    my $expression_string = argv->[1] // die "need path";
-
     Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 0, 0);
 
-    my $expr = Vmprobe::Expression->new($expression_string);
-    my $result = $expr->eval();
+    my $snapshot_ref;
 
-    Vmprobe::Cache::Snapshot::restore($path, $$result);
+    if (defined argv->[1]) {
+        my $expression_string = argv->[1];
+
+        my $expr = Vmprobe::Expression->new($expression_string);
+
+        $snapshot_ref = $expr->eval();
+    } else {
+        local $/;
+
+        my $snapshot = <STDIN>;
+
+        $snapshot_ref = \$snapshot;
+    }
+
+    Vmprobe::Cache::Snapshot::restore($path, $$snapshot_ref);
 }
