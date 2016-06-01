@@ -6,6 +6,7 @@ use Vmprobe::Cache::Snapshot;
 use Vmprobe::RunContext;
 use Vmprobe::DB::Probe;
 use Vmprobe::DB::Entry;
+use Vmprobe::DB::EntryByProbe;
 
 
 our $parser;
@@ -55,6 +56,7 @@ sub eval {
     my $txn = new_lmdb_txn();
 
     local $self->{entry_db} = Vmprobe::DB::Entry->new($txn);
+    local $self->{entry_by_probe_db} = Vmprobe::DB::EntryByProbe->new($txn);
 
     my $result_ref = $self->{root_expr}->eval($self);
 
@@ -138,7 +140,7 @@ sub _trigger_change_cb {
             my $method = $self->{Method}->[$i];
 
             die "unrecognized method '$method->{Name}'"
-                if !grep { $_ eq $method->{Name} } qw{ flag };
+                if !grep { $_ eq $method->{Name} } qw{ flag first last };
 
             $self->{opt}->{$method->{Name}} = $method->{Argument};
         }
@@ -158,29 +160,52 @@ sub _trigger_change_cb {
 
         $self->compile if !exists $self->{type};
 
+        return $self->{result_ref} if exists $self->{result_ref};
+
         if ($self->{type} eq 'entry') {
-            return $self->{result_ref} if exists $self->{result_ref};
+            return $self->eval_entry($container, $self->{identifier});
+        } elsif ($self->{type} eq 'probe') {
+            die "can't specify both first and last" if exists $self->{opt}->{first} && exists $self->{opt}->{last};
 
-            my $entry = $container->{entry_db}->get($self->{identifier});
+            my $entry_id;
 
-            die "unable to find entry '$self->{identifier}'" if !defined $entry;
-
-            if (keys %{ $entry->{data}->{snapshots} } == 1 && !exists $self->{opt}->{flag}) {
-                $self->{result_ref} = \values %{ $entry->{data}->{snapshots} };
+            if (exists $self->{opt}->{first}) {
+                $entry_id = $container->{entry_by_probe_db}->first_dup($self->{identifier});
+            } elsif (exists $self->{opt}->{last}) {
+                $entry_id = $container->{entry_by_probe_db}->last_dup($self->{identifier});
             } else {
-                die "entry has multiple flags recorded (" . join(',', keys %{ $entry->{data}->{snapshots} }) . "), please specify a flag in expression"
-                    if !exists $self->{opt}->{flag};
-
-                $self->{result_ref} = \$entry->{data}->{snapshots}->{$self->{opt}->{flag}};
-
-                die "entry does not contain the flag '$self->{opt}->{flag}'"
-                    if !defined ${ $self->{result_ref} };
+                die "for a probe, must specify either first or last";
             }
 
-            return $self->{result_ref};
+            die "unable to lookup entry for probe $self->{identifier}" if !defined $entry_id;
+
+            return $self->eval_entry($container, $entry_id);
         } else {
-            die "probe expressions not yet supported";
+            die "unknown type: $self->{type}";
         }
+    }
+
+
+    sub eval_entry {
+        my ($self, $container, $entry_id) = @_;
+
+        my $entry = $container->{entry_db}->get($entry_id);
+
+        die "unable to find entry '$entry_id'" if !defined $entry;
+
+        if (keys %{ $entry->{data}->{snapshots} } == 1 && !exists $self->{opt}->{flag}) {
+            $self->{result_ref} = \values %{ $entry->{data}->{snapshots} };
+        } else {
+            die "entry has multiple flags recorded (" . join(',', keys %{ $entry->{data}->{snapshots} }) . "), please specify a flag in expression"
+                if !exists $self->{opt}->{flag};
+
+            $self->{result_ref} = \$entry->{data}->{snapshots}->{$self->{opt}->{flag}};
+
+            die "entry does not contain the flag '$self->{opt}->{flag}'"
+                if !defined ${ $self->{result_ref} };
+        }
+
+        return $self->{result_ref};
     }
 }
 

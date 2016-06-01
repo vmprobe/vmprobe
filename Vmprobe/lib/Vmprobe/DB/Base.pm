@@ -265,28 +265,44 @@ sub iterate_dups {
 
 
 
-sub last_dup {
-    my ($self, $params) = @_;
+sub first_dup {
+    my ($self, $key) = @_;
 
-    die "DB not declared dup_keys" if !$self->dup_keys();
+    my $output;
 
-    my $cursor = $self->{db}->Cursor;
+    ITER: {
+        $self->iterate_dups({
+            key => $key,
+            cb => sub {
+                $output = $_[1];
+                last ITER;
+            },
+        });
+    }
 
-    my ($key, $value);
-
-
-    $key = $params->{key} // die "need key to iterate over dups";
-
-    eval {
-        $cursor->get($key, $value, MDB_SET_KEY);
-    };
-
-    return if $@;
-
-    $cursor->get($key, $value, MDB_LAST_DUP);
-
-    return $value;
+    return $output;
 }
+
+
+sub last_dup {
+    my ($self, $key) = @_;
+
+    my $output;
+
+    ITER: {
+        $self->iterate_dups({
+            key => $key,
+            reverse => 1,
+            cb => sub {
+                $output = $_[1];
+                last ITER;
+            },
+        });
+    }
+
+    return $output;
+}
+
 
 
 #################
