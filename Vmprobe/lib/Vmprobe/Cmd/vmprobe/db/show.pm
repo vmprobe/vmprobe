@@ -25,6 +25,19 @@ opt:
     type: Bool
     alias: r
     doc: Print a binary snapshot to standard output.
+  min:
+    type: Str
+    alias: m
+    doc: When showing, only show files this size or larger (ie "16k", "0.5G")
+  num:
+    type: Str
+    alias: n
+    doc: Only show this number of files in each snapshot, sorted by most populated.
+  width:
+    type: Str
+    alias: w
+    default: 25
+    doc: Width of the residency charts.
 
 };
 
@@ -45,7 +58,11 @@ sub run {
         print $$result;
     } else {
         binmode(STDOUT, ":utf8");
-        print Vmprobe::Cache::Snapshot::render_parse_records($result);
+
+        my $min_pages;
+        $min_pages = Vmprobe::Util::parse_size(opt->{min}) if defined opt->{min};
+
+        print Vmprobe::Cache::Snapshot::render_parse_records($result, opt->{width}, opt->{num}, $min_pages);
     }
 }
 

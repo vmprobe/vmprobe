@@ -26,3 +26,6 @@ sub run {
         Vmprobe::Cache::evict(Cwd::realpath($path));
     }
 }
+
+
+1;

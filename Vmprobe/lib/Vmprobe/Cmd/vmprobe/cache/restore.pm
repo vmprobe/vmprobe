@@ -49,3 +49,7 @@ sub run {
 
     Vmprobe::Cache::Snapshot::restore(Cwd::realpath($path), $$snapshot_ref);
 }
+
+
+
+1;
