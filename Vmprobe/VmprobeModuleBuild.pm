@@ -76,6 +76,7 @@ sub ACTION_bundle {
     sys("rm -rf _bundle/shlib/ _bundle/MANIFEST _bundle/META.yml _bundle/script");
     sys("chmod a-x _bundle/*.so*");
     sys("strip _bundle/libvmprobe.so");
+    sys("strip _bundle/liblmdb.so");
 
     sys("rm -rf _bundle/lib/Tk/ _bundle/lib/Tk.pm _bundle/lib/auto/Tk/");
 }
@@ -92,12 +93,7 @@ sub build_par {
         -l ../libvmprobe/libvmprobe.so
         -l $liblmdb_path
 
-        ## FIXME: find a way to not hard-code paths/versions
-        -l /lib/x86_64-linux-gnu/libncursesw.so.5
-        -l /lib/x86_64-linux-gnu/libtinfo.so.5
-
         -M Vmprobe::
-        -M Vmprobe::Viewer::
         -M Vmprobe::Cmd::
         -M Vmprobe::Raw::
 
@@ -112,7 +108,6 @@ sub build_par {
         ## 3rd party modules
 
         -M Net::OpenSSH::
-        -M Curses::UI::
         -X TK::
 
         -B -p -o vmprobe.par
