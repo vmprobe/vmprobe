@@ -8,7 +8,7 @@ our @EXPORT = qw(opt argv);
 use EV;
 
 use Getopt::Long qw(:config default bundling no_ignore_case no_auto_abbrev);
-use YAML;
+use YAML::XS::LibYAML;
 
 use Vmprobe;
 use Vmprobe::Util;
@@ -196,7 +196,7 @@ sub load_yaml_spec {
     }
 
     eval {
-        $yaml_spec = YAML::Load($yaml_spec);
+        $yaml_spec = YAML::XS::LibYAML::Load($yaml_spec);
     };
 
     if ($@) {
