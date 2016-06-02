@@ -2,6 +2,8 @@ package Vmprobe::Cmd::vmprobe::cache::evict;
 
 use common::sense;
 
+use Cwd;
+
 use Vmprobe::Cmd;
 use Vmprobe::Util;
 use Vmprobe::Cache;
@@ -21,6 +23,6 @@ sub run {
     die "need files or directories" if !@{ argv() };
 
     foreach my $path (@{ argv() }) {
-        Vmprobe::Cache::evict($path);
+        Vmprobe::Cache::evict(Cwd::realpath($path));
     }
 }

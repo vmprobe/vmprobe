@@ -2,6 +2,8 @@ package Vmprobe::Cmd::vmprobe::cache::restore;
 
 use common::sense;
 
+use Cwd;
+
 use Vmprobe::Cmd;
 use Vmprobe::Util;
 use Vmprobe::RunContext;
@@ -45,5 +47,5 @@ sub run {
         $snapshot_ref = \$snapshot;
     }
 
-    Vmprobe::Cache::Snapshot::restore($path, $$snapshot_ref);
+    Vmprobe::Cache::Snapshot::restore(Cwd::realpath($path), $$snapshot_ref);
 }

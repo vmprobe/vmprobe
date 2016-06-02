@@ -7,8 +7,8 @@ use strict;
 
 my $lib_dir = '/usr/lib/vmprobe/lib';
 @INC = ($lib_dir);
-chdir($lib_dir);
 
 
 require Vmprobe::Cmd;
+$Vmprobe::Cmd::lib_dir = $lib_dir;
 Vmprobe::Cmd::run_cmd('vmprobe', \@ARGV);

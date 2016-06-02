@@ -103,7 +103,7 @@ sub render_parse_records {
 
         my $amount = render_resident_amount($rec->{num_resident_pages}, $rec->{num_pages});
 
-        $output .= sprintf("%-18s %-${num_buckets}s  %s\n", $amount, Vmprobe::Util::buckets_to_rendered($rec), ($rec->{filename} || 'ø'));
+        $output .= sprintf("%-18s %-${num_buckets}s  %s\n", $amount, Vmprobe::Util::buckets_to_rendered($rec), $rec->{filename});
     }
 
     return $output;

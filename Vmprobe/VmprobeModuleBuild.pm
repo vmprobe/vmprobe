@@ -86,8 +86,6 @@ sub build_par {
 
     my $liblmdb_path = Alien::LMDB->new->dist_dir() . "/lib/liblmdb.so";
 
-    #$ENV{'LD_LIBRARY_PATH'} = '/lib/x86_64-linux-gnu';
-
     pp_wrapper(qq{
         bin/vmprobe
 
@@ -106,7 +104,9 @@ sub build_par {
         ## Core modules not picked up by ScanDeps for some reason
         -M PerlIO -M attributes -M Tie::Hash::NamedCapture
 
-        ## Unicode support
+        -F 'PodStrip=(?<!Grammars)\\.pm\$'
+
+        ## Unicode support (not needed for now)
         ## -u -M _charnames -M utf8
 
         ## 3rd party modules
@@ -124,6 +124,7 @@ sub pp_wrapper {
     my $args = shift;
 
     my $cmd = qq{
+        PAR_VERBATIM=1
         $^X -Mblib `which pp`
         $args
     };

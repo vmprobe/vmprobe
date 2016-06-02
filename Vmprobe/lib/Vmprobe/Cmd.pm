@@ -13,7 +13,7 @@ use YAML;
 use Vmprobe;
 use Vmprobe::Util;
 
-
+our $lib_dir;
 our $opt = {};
 our $argv;
 
@@ -45,6 +45,9 @@ sub run_cmd {
 
     my $dir = __FILE__;
     $dir =~ s{\.pm$}{/};
+
+    ## Work-around the fact that our production builds don't seem to have absolute paths even though the paths in @INC are absolute
+    $dir = "$lib_dir/$dir" if defined $lib_dir && $dir !~ m{^/};
 
     run_cmd_aux([$cmd], $dir, $args);
 }

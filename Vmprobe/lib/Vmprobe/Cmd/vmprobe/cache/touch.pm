@@ -2,6 +2,8 @@ package Vmprobe::Cmd::vmprobe::cache::touch;
 
 use common::sense;
 
+use Cwd;
+
 use Vmprobe::Cmd;
 use Vmprobe::Util;
 use Vmprobe::Cache;
@@ -21,6 +23,6 @@ sub run {
     die "need files or directories" if !@{ argv() };
 
     foreach my $path (@{ argv() }) {
-        Vmprobe::Cache::touch($path);
+        Vmprobe::Cache::touch(Cwd::realpath($path));
     }
 }
