@@ -1,3 +1,12 @@
+0.3.0
+  * Simplify virtual memory interface
+  * Better snapshot display (limiting, wide display, etc)
+  * Pagemap support: in addition to mincore(), you can also
+    snapshot any linux pagemap flags
+  * Command tracing
+  * Database support
+  * Snapshot expressions
+
 0.2.2
   * vmprobed - vmprobe daemon command
 
