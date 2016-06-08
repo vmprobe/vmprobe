@@ -11,6 +11,7 @@ use YAML::XS::LibYAML;
 use Vmprobe::Cmd;
 use Vmprobe::Util;
 use Vmprobe::RunContext;
+use Vmprobe::DB::Event;
 
 
 our $spec = q{
@@ -107,18 +108,53 @@ sub add_connection {
             return;
         }
 
-        my $run_summary = {
-            run_id => get_session_token(),
-        };
-
-        $conns->{$id}->{handle}->push_write(packstring => "w", sereal_encode($run_summary));
-
         $conns->{$id}->{handle}->push_read(packstring => "w", $msg_handler);
+
+        handle_msg($id, $response);
     };
 
     $conns->{$id}->{handle}->push_read(packstring => "w", $msg_handler);
 }
 
+
+sub handle_msg {
+    my ($id, $msg) = @_;
+
+    my $c = $conns->{$id};
+    my $output = {};
+
+    if ($msg->{cmd} eq 'run') {
+        die "connection already ran command" if $c->{run_id}; ## FIXME: kill connection
+
+        $c->{run_id} = $output->{run_id} = get_session_token();
+
+        my $record = {
+            run_id => $c->{run_id},
+            msg => $msg,
+        };
+
+        my $txn = new_lmdb_txn();
+
+        Vmprobe::DB::Event->new($txn)->insert(curr_time(), $record);
+
+        $txn->commit;
+    } elsif ($msg->{cmd} eq 'exit') {
+        my $record = {
+            run_id => $c->{run_id},
+            msg => $msg,
+        };
+
+        my $txn = new_lmdb_txn();
+
+        Vmprobe::DB::Event->new($txn)->insert(curr_time(), $record);
+
+        $txn->commit;
+    } else {
+        die "unknown cmd: $msg->{cmd}";
+    }
+
+    $c->{handle}->push_write(packstring => "w", sereal_encode($output));
+}
 
 
 
