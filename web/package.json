@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "bootstrap": "^3.3.6",
+    "d3": "^3.5.17",
     "fixed-data-table": "^0.6.0",
     "is-client": "0.0.2",
     "jquery": "^2.1.4",

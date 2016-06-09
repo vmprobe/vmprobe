@@ -3,7 +3,7 @@ package Vmprobe::RunContext;
 use common::sense;
 
 use Exporter 'import';
-our @EXPORT = qw(new_lmdb_txn switchboard);
+our @EXPORT = qw(new_lmdb_txn switchboard logger);
 
 use LMDB_File;
 
@@ -81,7 +81,7 @@ sub _init_db {
 
 
 sub new_lmdb_txn () {
-    _init_db();
+    _init_db() if !$lmdb_env;
 
     return $lmdb_env->BeginTxn();
 }
@@ -109,6 +109,87 @@ sub switchboard () {
     $switchboard = Vmprobe::Switchboard->new($switchboard_dir);
 
     return $switchboard;
+}
+
+
+
+
+our $logger;
+our $print_to_stdout;
+
+sub init_logger {
+    ($print_to_stdout) = @_;
+
+    return if defined $logger;
+
+    require Log::File::Rolling;
+    require Log::Defer;
+    require JSON::XS;
+    require Data::Dumper;
+
+    die "var dir hasn't been set" if !defined $var_dir;
+ 
+    my $log_dir = "$var_dir/logs";
+
+    if (!-e $log_dir) {
+        mkdir($log_dir) || die "couldn't mkdir($log_dir): $!";
+    }
+
+    $logger = Log::File::Rolling->new(
+                  filename => "$log_dir/api.%Y-%m-%dT%H.log",
+                  current_symlink => "$log_dir/api.log.current",
+                  timezone => 'localtime',
+              ) || die "Error creating Log::File::Rolling logger: $!";
+}
+
+
+sub logger {
+    my ($self) = @_;
+
+    die "logger not yet initialized" if !$logger;
+
+    return Log::Defer->new({ cb => sub {
+        my $msg = shift;
+
+        if ($print_to_stdout) {
+            state $pretty_json = JSON::XS->new->canonical(1)->pretty(1);
+            say $pretty_json->encode($msg);
+        }
+
+        my $encoded_msg;
+        eval {
+            $encoded_msg = JSON::XS::encode_json($msg)
+        };
+
+        if ($@) {
+            eval {
+                $encoded_msg = JSON::XS::encode_json(_json_clean($msg));
+            };
+
+            if ($@) {
+                $encoded_msg = "Failed to JSON clean: " . Data::Dumper::Dumper($msg);
+            }
+        }
+
+        $logger->log("$encoded_msg\n");
+    }});
+}
+
+
+sub _json_clean {
+    my $x = shift;
+
+    if (ref $x) {
+        if (ref $x eq 'ARRAY') {
+            $x->[$_] = _json_clean($x->[$_]) for 0 .. @$x-1;
+        } elsif (ref $x eq 'HASH') {
+            $x->{$_} = _json_clean($x->{$_}) for keys %$x;
+        } else {
+            $x = "Unable to JSON encode: " . Dumper($x);
+        }
+    }
+
+    return $x;
 }
 
 

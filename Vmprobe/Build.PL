@@ -43,6 +43,7 @@ my %module_build_args = (
     'Linux::Inotify2' => 0,
     'Class::ISA' => 0,
     'Regexp::Grammars' => 0,
+    'IPC::Signal' => 0,
 
     ## Not needed anymore?
     'Plack' => 0,

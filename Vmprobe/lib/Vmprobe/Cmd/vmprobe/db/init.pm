@@ -23,7 +23,7 @@ opt:
 
 
 sub run {
-    Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 0, 1);
+    Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 1, 0);
     say "vmprobe db initialized: $Vmprobe::RunContext::var_dir";
 }
 

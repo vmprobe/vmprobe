@@ -35,8 +35,9 @@ opt:
 
 
 
+our $api_fh;
 our $api_handle;
-our $run_summary;
+our $run_id;
 
 
 
@@ -51,7 +52,7 @@ sub run {
 
     my $exit_code = $run_cv->recv;
 
-    terminate_vmprobe_api();
+    terminate_vmprobe_api($exit_code);
 
     exit $exit_code;
 }
@@ -67,6 +68,8 @@ sub initiate_vmprobe_api {
         die "vmprobe: failed to connect to " . opt->{host} . ":" . opt->{port} . ": $!"
             if !$fh;
 
+        $api_fh = $fh;
+
         $api_handle = AnyEvent::Handle->new(
                           fh => $fh,
                           on_error => sub {
@@ -76,20 +79,28 @@ sub initiate_vmprobe_api {
                            },
                       );
 
-        my $info = {
-            cmd => 'run',
-            argv => argv(),
-            hostname => hostname(),
+        my $msg = {
+            cmd => 'new-run',
+            req_id => 1,
+            info => {
+                timestamp => curr_time(),
+                argv => argv(),
+                hostname => hostname(),
+            },
         };
 
-        $api_handle->push_write(packstring => "w", sereal_encode($info));
+        $api_handle->push_write(packstring => "w", sereal_encode($msg));
 
         $api_handle->push_read(packstring => "w", sub {
             my ($handle, $response) = @_;
 
             eval {
-                $run_summary = sereal_decode($response);
+                $response = sereal_decode($response);
             };
+
+            die "expected 'start-run' got '$response->{cmd}'" if $response->{cmd} ne 'start-run';
+
+            $run_id = $response->{run_id};
 
             if ($@) {
                 die "vmprobe: unable to parse response from vmprobe api: $@";
@@ -105,20 +116,38 @@ sub initiate_vmprobe_api {
 
 
 sub terminate_vmprobe_api {
+    my ($exit_code) = @_;
+
     my $cv = AE::cv;
 
-    my $info = {
-        cmd => 'exit',
-        run_id => $run_summary->{run_id},
+    my $msg = {
+        cmd => 'end-run',
+        req_id => 2,
+        run_id => $run_id,
+        info => {
+            timestamp => curr_time(),
+        },
     };
 
-    $api_handle->push_write(packstring => "w", sereal_encode($info));
+    if ($exit_code) {
+        if ($exit_code & 0xFF) {
+            require IPC::Signal;
+            $msg->{info}->{kill} = IPC::Signal::sig_name($exit_code & 0xFF);
+        } else {
+            $msg->{info}->{exit} = $exit_code >> 8;
+        }
+    }
+
+    $api_handle->push_write(packstring => "w", sereal_encode($msg));
 
     $api_handle->push_read(packstring => "w", sub {
         $cv->send;
     });
 
     $cv->recv;
+
+    undef $api_handle;
+    undef $api_fh;
 }
 
 
