@@ -115,6 +115,7 @@ sub _handle_msg {
         my $event = {
             type => 'new-run',
             run_id => $run_id,
+            event_id => $timestamp,
             info => $msg->{info},
             peer_host => $c->{peer_host},
         };
@@ -142,6 +143,7 @@ sub _handle_msg {
         my $event = {
             type => 'end-run',
             run_id => $msg->{run_id},
+            event_id => $timestamp,
             info => $msg->{info},
             peer_host => $c->{peer_host},
         };

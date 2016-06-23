@@ -19,6 +19,8 @@ use JSON::XS;
 use Vmprobe;
 use Vmprobe::Util;
 use Vmprobe::Cmd;
+use Vmprobe::RunContext;
+use Vmprobe::DB::Event;
 
 
 our $spec = q{
@@ -46,13 +48,24 @@ opt:
         type: Str
         doc: Port to run the react hot load development server on. Only applicable if --repo-dev-mode is specified.
         default: 58118
+    var-dir:
+        type: Str
+        doc: Var directory for DB and logs.
 };
+
+
+
+
+
+our $sessions = {};
 
 
 
  
 
 sub run {
+    Vmprobe::RunContext::set_var_dir(opt->{'var-dir'}, 1, 0);
+
     my $server = Twiggy::Server->new(
         host => opt->{host},
         port => opt->{port},
@@ -155,7 +168,76 @@ sub vmprobe_api_handler {
  
     my $req = Plack::Request->new($env);
 
+    if ($req->path_info eq '/api/connect') {
+        my $token = get_session_token();
+
+        $sessions->{$token} = {};
+
+        my $resp = {
+            token => $token,
+        };
+
+        return [200, ["Content-Type" => "application/json"], [encode_json($resp)]];
+    } elsif ($req->path_info eq '/api/get_events') {
+        my $token = $req->parameters->{token};
+        my $session = $sessions->{$token};
+
+        if (!defined $session) {
+            return [403, ["Content-Type" => "text/plain"], ["unrecognized session token"]];
+        }
+
+        return sub {
+            my $responder = shift;
+
+            $session->{get_events_cb} = sub {
+                my $msgs = shift;
+                $responder->([200, ["Content-Type" => "application/json"], [encode_json($msgs)]]);
+            };
+
+            process_get_events($token, $req);
+        };
+    }
+
     return [404, ["Content-Type" => "text/plain"], ["unrecognized end-point"]];
+}
+
+
+
+sub process_get_events {
+    my ($token, $req) = @_;
+
+    my $from = $req->parameters->{from} // 0;
+
+    my $check_cb = sub {
+        my $txn = new_lmdb_txn();
+
+        my @events;
+
+        ITER: {
+            Vmprobe::DB::Event->new($txn)->iterate({
+                backward => 1,
+                cb => sub {
+                    my ($k, $v) = @_;
+                    last ITER if $k == $from;
+                    unshift @events, $v;
+                },
+            });
+        }
+
+        $txn->commit;
+
+        if (@events) {
+            delete $sessions->{$token}->{events_switchboard_watcher};
+            my $get_events_cb = delete $sessions->{$token}->{get_events_cb};
+            $get_events_cb->(\@events);
+        }
+    };
+
+    $sessions->{$token}->{events_switchboard_watcher} = switchboard->listen('new-event', sub {
+        $check_cb->();
+    });
+
+    $check_cb->();
 }
 
 
