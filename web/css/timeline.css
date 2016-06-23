@@ -12,3 +12,13 @@
 .x.axis path {
   display: none;
 }
+
+
+
+.run-bar {
+  fill:black;
+}
+
+.run-bar.in-progress {
+  fill:steelblue;
+}
