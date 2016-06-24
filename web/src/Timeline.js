@@ -1,6 +1,11 @@
 import React from 'react';
 
 import d3 from 'd3';
+import $ from 'jquery';
+
+window.jQuery = $;
+require("../node_modules/bootstrap/dist/js/bootstrap.js");
+require("../css/bootstrap.min.css");
 
 require("../css/timeline.css");
 
@@ -12,12 +17,6 @@ let margin = {top: 20, right: 20, bottom: 30, left: 40},
 let intial_time_window = 86400;
 
 
-
-
-
-function shallowCopyObject(x) {
-  return Object.assign(new x.constructor(), x);
-}
 
 
 
@@ -45,6 +44,15 @@ export default class Timeline extends React.Component {
 
 
   componentDidMount() {
+    $('body').tooltip({
+      selector: '.timeline rect',
+      placement: 'bottom',
+      container: 'body',
+      animation: false,
+      html: true,
+      title: function(){ console.log(this); return this.getAttribute('data-run-id') },
+    });
+
     this.svg = d3.select(this.refs.chart).append("svg");
 
     this.svg
@@ -113,7 +121,7 @@ export default class Timeline extends React.Component {
             delete this.runs_in_progress[e.run_id];
 
 
-            this.runs_overlaps.push([ e.info.timestamp, shallowCopyObject(this.runs_overlaps[this.runs_overlaps.length-1][1])]);
+            this.runs_overlaps.push([ e.info.timestamp, $.extend({}, this.runs_overlaps[this.runs_overlaps.length-1][1])]);
             delete this.runs_overlaps[this.runs_overlaps.length-1][1][ this.runs_verticals[e.run_id] ];
         }
     }
@@ -122,6 +130,7 @@ export default class Timeline extends React.Component {
 
     sel.enter()
       .append('rect')
+      .attr('data-run-id', (event_id) => event_id)
       .attr('height', 20);
 
     this.updateRunBars(sel);
